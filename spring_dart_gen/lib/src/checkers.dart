@@ -30,5 +30,8 @@ final withParserChecker = TypeChecker.typeNamed(WithParser, inPackage: 'spring_d
 final requestChecker = TypeChecker.typeNamed(Request, inPackage: 'shelf');
 final responseChecker = TypeChecker.typeNamed(Response, inPackage: 'shelf');
 
+final withMiddlewareChecker = TypeChecker.typeNamed(WithMiddleware, inPackage: 'spring_dart_core');
+final springMiddlewareChecker = TypeChecker.typeNamed(SpringMiddleware, inPackage: 'spring_dart_core');
+
 final stringChecker = TypeChecker.typeNamed(String);
 final jsonChecker = TypeChecker.typeNamed(Map<String, dynamic>);

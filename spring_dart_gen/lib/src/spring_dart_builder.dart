@@ -51,30 +51,26 @@ class SpringDartBuilder extends Builder {
 
           final constructorParams = switch (constructors.isNotEmpty) {
             true => constructors.first.formalParameters.map((p) {
-              imports.add(p.type.element?.library?.uri.toString() ?? '-');
+              // imports.add(p.type.element?.library?.uri.toString() ?? '-');
               final found = p.type.getDisplayString().toCamelCase();
               return p.isNamed ? '${p.name}: $found' : found;
             }).toList(),
             false => <String>[],
           };
 
-          repositories.add('final $name ${name?.toCamelCase()} = $className(${constructorParams.join(', ')})');
+          repositories.add('final ${name?.toCamelCase()} = $className(${constructorParams.join(', ')})');
         } else if (serviceChecker.hasAnnotationOf(element)) {
           final className = element.name;
-          final superClassName = element.interfaces.firstOrNull?.getDisplayString();
-          final name = superClassName ?? className;
 
           imports.add(element.library.uri.toString());
 
-          services.add('final $name ${className?.toCamelCase()} = $className()');
+          services.add('final ${className?.toCamelCase()} = $className()');
         } else if (configurationChecker.hasAnnotationOf(element)) {
           final className = element.name;
-          final superClassName = element.interfaces.firstOrNull?.getDisplayString();
-          final name = superClassName ?? className;
 
           imports.add(element.library.uri.toString());
 
-          configurations.add('final $name ${name?.toCamelCase()} = $className()');
+          configurations.add('final ${className?.toCamelCase()} = $className()');
 
           for (final method in element.methods.where((m) => beanChecker.hasAnnotationOf(m))) {
             final methodName = method.name;
@@ -83,15 +79,15 @@ class SpringDartBuilder extends Builder {
 
             if (returnType.isDartAsyncFuture || returnType.isDartAsyncFutureOr) {
               final realReturnType = (returnType as ParameterizedType).typeArguments.first;
-              imports.add(realReturnType.element?.library?.uri.toString() ?? '');
+              // imports.add(realReturnType.element?.library?.uri.toString() ?? '');
               beans.add(
-                'final ${realReturnType.getDisplayString()} ${realReturnType.getDisplayString().toCamelCase()} = await ${name?.toCamelCase()}.$methodName()',
+                'final ${realReturnType.getDisplayString().toCamelCase()} = await ${className?.toCamelCase()}.$methodName()',
               );
             } else {
               final methodReturnType = returnType.getDisplayString();
 
               beans.add(
-                'final $methodReturnType ${methodReturnType.toCamelCase()} = ${name?.toCamelCase()}.$methodName()',
+                'final ${methodReturnType.toCamelCase()} = ${className?.toCamelCase()}.$methodName()',
               );
             }
           }
@@ -99,9 +95,9 @@ class SpringDartBuilder extends Builder {
       }
     }).toList();
 
-    buffer.writeln('// GENERATED CODE - DO NOT MODIFY BY HAND');
+    buffer.writeln('// POWERED BY SPRING DART');
 
-    buffer.writeln('// POWERED BY SPRING DART\n\n');
+    buffer.writeln('// GENERATED CODE - DO NOT MODIFY BY HAND\n\n');
 
     buffer.writeln('import \'package:spring_dart/spring_dart.dart\';');
 
@@ -117,28 +113,12 @@ class SpringDartBuilder extends Builder {
   SpringDart._(this.router);
 
   static Future<SpringDart> create() async {
-    final router = Router();
-
-    // Configurations
-
-    ${configurations.map((e) => '$e;').join('\n')}
-
-    // Beans
-
-    ${beans.map((e) => '$e;').join('\n')}
-
-    // Repositories
-
-    ${repositories.map((e) => '$e;').join('\n')}
-
-    // Services
-
-    ${services.map((e) => '$e;').join('\n')}
-
-    // Controllers
-
-    ${controllers.map((e) => '$e;\n').join('\n')}
-
+    final router = Router();${configurations.isNotEmpty ? '''\n// Configurations
+    ${configurations.map((e) => '$e;').join('\n')}''' : ''}${beans.isNotEmpty ? '''\n// Beans
+    ${beans.map((e) => '$e;').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
+    ${repositories.map((e) => '$e;').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
+    ${services.map((e) => '$e;').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers
+    ${controllers.map((e) => '$e;').join('\n')}''' : ''}
     return SpringDart._(router);
   }
 

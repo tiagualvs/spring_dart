@@ -8,3 +8,4 @@ export 'package:shelf_router/shelf_router.dart';
 export 'src/annotations.dart';
 export 'src/json.dart';
 export 'src/param_parser.dart';
+export 'src/spring_middleware.dart';

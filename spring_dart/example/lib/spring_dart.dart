@@ -1,23 +1,22 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 // POWERED BY SPRING DART
+// GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'package:spring_dart/spring_dart.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:example/configurations/security_configuration.dart';
 import 'package:example/controllers/auth_controller.dart';
-import 'package:example/configurations/password_service.dart';
-import 'package:example/repositories/users_repository.dart';
 import 'package:example/dtos/sign_in_dto.dart';
 import 'package:example/dtos/sign_up_dto.dart';
 import 'package:example/dtos/refresh_token_dto.dart';
 import 'package:example/dtos/create_post_dto.dart';
 import 'package:example/parsers/date_time_parser.dart';
 import 'package:example/controllers/coordinates_controller.dart';
+import 'package:example/middlewares/log_middleware.dart';
 import 'package:example/controllers/users_controller.dart';
-import 'package:example/repositories/posts_repository.dart';
-import 'package:example/repositories/messages_repository.dart';
 import 'package:example/repositories/messages_repository_imp.dart';
+import 'package:example/repositories/posts_repository.dart';
+import 'package:example/repositories/users_repository.dart';
 
 class SpringDart {
   final Router router;
@@ -26,41 +25,25 @@ class SpringDart {
 
   static Future<SpringDart> create() async {
     final router = Router();
-
     // Configurations
-
-    final SecurityConfiguration securityConfiguration = SecurityConfiguration();
-
+    final securityConfiguration = SecurityConfiguration();
     // Beans
-
-    final PasswordService passwordService = securityConfiguration.password();
-
+    final passwordService = securityConfiguration.password();
     // Repositories
-
-    final MessagesRepository messagesRepository = MessagesRepositoryImp();
-    final PostsRepository postsRepository = PostsRepository();
-    final UsersRepository usersRepository = UsersRepository();
-
-    // Services
-
+    final messagesRepository = MessagesRepositoryImp();
+    final postsRepository = PostsRepository();
+    final usersRepository = UsersRepository();
     // Controllers
-
     final authController = _$AuthController(passwordService, usersRepository);
-
     router.mount('/auth', authController.handler);
-
     final coordinatesController = _$CoordinatesController();
-
     router.mount('/coordinates', coordinatesController.handler);
-
     final usersController = _$UsersController(
       usersRepository,
       postsRepository,
       messagesRepository,
     );
-
     router.mount('/users', usersController.handler);
-
     return SpringDart._(router);
   }
 
@@ -152,7 +135,7 @@ class _$AuthController extends AuthController {
 }
 
 class _$CoordinatesController extends CoordinatesController {
-  _$CoordinatesController();
+  const _$CoordinatesController();
 
   Handler get handler {
     final router = Router();
@@ -161,7 +144,11 @@ class _$CoordinatesController extends CoordinatesController {
       return current(request);
     });
 
-    return router.call;
+    Handler handler;
+
+    handler = LogMiddleware().handler(router.call);
+
+    return handler;
   }
 }
 

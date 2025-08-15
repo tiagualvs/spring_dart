@@ -13,11 +13,35 @@ String controllerHelper(
   final controllerPath = controllerChecker.firstAnnotationOf(element)?.getField('path')?.toStringValue() ?? '';
   final controllerClassName = element.name;
 
+  final middlewares = withMiddlewareChecker.annotationsOf(element);
+
+  for (final middleware in middlewares) {
+    final type = middleware.getField('middleware')?.toTypeValue();
+
+    if (type == null) {
+      throw Exception('@WithMiddleware middleware must be a type');
+    }
+
+    if (type.element is! ClassElement) {
+      throw Exception('@WithMiddleware middleware must be a class');
+    }
+
+    final superType = (type.element as ClassElement).supertype;
+
+    if (superType == null) {
+      throw Exception('@WithMiddleware middleware must implement SpringMiddleware');
+    }
+
+    if (!springMiddlewareChecker.isExactlyType(superType)) {
+      throw Exception('@WithMiddleware middleware must implement SpringMiddleware');
+    }
+  }
+
   imports.add(element.library.uri.toString());
 
   final constructorParams = switch (constructors.isNotEmpty) {
     true => constructors.first.formalParameters.map((p) {
-      imports.add(p.type.element?.library?.uri.toString() ?? '-');
+      // imports.add(p.type.element?.library?.uri.toString() ?? '-');
       final found = p.type.getDisplayString().toCamelCase();
       return p.isNamed ? '${p.name}: $found' : found;
     }).toList(),
@@ -238,7 +262,17 @@ String controllerHelper(
     }
   }).join('\n\n')}
 
-        return router.call;
+        ${middlewares.isNotEmpty ? '''Handler handler;
+
+        ${middlewares.map((m) {
+          final type = m.getField('middleware')?.toTypeValue();
+
+          imports.add(type?.element?.library?.uri.toString() ?? '');
+
+          return '''handler = ${type?.getDisplayString()}().handler(router.call);
+          
+          return handler;''';
+        }).join('\n')}''' : '''return router.call;'''}
       }
   }''';
 }

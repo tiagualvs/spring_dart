@@ -123,3 +123,9 @@ class WithParser {
   final Type parser;
   const WithParser(this.parser);
 }
+
+/// `@WithMiddleware`
+class WithMiddleware {
+  final Type middleware;
+  const WithMiddleware(this.middleware);
+}

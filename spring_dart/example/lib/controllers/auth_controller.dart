@@ -1,5 +1,6 @@
 import 'package:example/configurations/password_service.dart';
 import 'package:example/dtos/create_post_dto.dart';
+import 'package:example/dtos/refresh_token_dto.dart';
 import 'package:example/dtos/sign_in_dto.dart';
 import 'package:example/dtos/sign_up_dto.dart';
 import 'package:example/repositories/users_repository.dart';
@@ -20,23 +21,23 @@ class AuthController {
   @Post('/sign-up')
   Future<Response> signUp(@Body() SignUpDto dto) async {
     if (dto.name.isEmpty) {
-      return Response.badRequest();
+      return Json.badRequest(body: {'error': 'Name is required.'});
     }
 
     if (dto.email.isEmpty) {
-      return Response.badRequest();
+      return Json.badRequest(body: {'error': 'Email is required.'});
     }
 
     if (dto.password.isEmpty) {
-      return Response.badRequest();
+      return Json.badRequest(body: {'error': 'Password is required.'});
     }
 
-    return Response.ok(dto.toString());
+    return Json.ok(body: dto);
   }
 
   @Post('/refresh-token')
-  Future<Response> refreshToken(Request request) async {
-    return Response.ok('Test');
+  Future<Response> refreshToken(@Body() RefreshTokenDto dto) async {
+    return Json.ok(body: {'refresh_token': dto.refreshToken});
   }
 
   @Get('/<id>')
@@ -53,11 +54,16 @@ class AuthController {
   Future<Response> createPost(
     @Param('id') String id,
     @Query('lang') String? lang,
-    @Context('age') int age,
     @Header('authorization') String? authorization,
     @Body() CreatePostDto dto,
   ) async {
-    return Response.ok('Test');
+    return Json.ok(
+      body: {
+        'title': dto.title,
+        'content': dto.content,
+        'created_at': dto.createdAt.toIso8601String(),
+      },
+    );
   }
 
   @Put('/posts/<id>/update')
@@ -65,7 +71,7 @@ class AuthController {
     return Response.ok('Test');
   }
 
-  @Delete('/posts/<id>/delete')
+  @Post('/posts/<id>/delete')
   Future<Response> deletePost(@Param('id') String id, @Body() Map<String, dynamic> body) async {
     return Response.ok('Test');
   }

@@ -1,6 +1,4 @@
-import 'package:spring_dart/spring_dart.dart';
-
-@Service()
+// @Service()
 class JwtService {
   String generateToken() => 'token';
 }

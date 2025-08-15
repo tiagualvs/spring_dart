@@ -1,15 +1,17 @@
 name: spring_dart_core
 description: A starting point for Dart libraries or applications.
-version: 1.0.0
+version: 0.0.1
 
 resolution: workspace
 
 environment:
   sdk: ^3.9.0
 
+dependencies:
+  dson_adapter: ^1.2.0+2
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+
 dev_dependencies:
   lints: ^5.0.0
   test: ^1.24.0
-dependencies:
-  shelf: ^1.4.2
-  shelf_router: ^1.1.4

@@ -111,3 +111,15 @@ class Header {
 class Dto {
   const Dto();
 }
+
+/// `@JsonKey`
+class JsonKey {
+  final String name;
+  const JsonKey(this.name);
+}
+
+/// `@WithParser`
+class WithParser {
+  final Type parser;
+  const WithParser(this.parser);
+}

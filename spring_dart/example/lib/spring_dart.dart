@@ -10,78 +10,102 @@ import 'package:example/configurations/password_service.dart';
 import 'package:example/repositories/users_repository.dart';
 import 'package:example/dtos/sign_in_dto.dart';
 import 'package:example/dtos/sign_up_dto.dart';
+import 'package:example/dtos/refresh_token_dto.dart';
 import 'package:example/dtos/create_post_dto.dart';
+import 'package:example/parsers/date_time_parser.dart';
+import 'package:example/controllers/coordinates_controller.dart';
 import 'package:example/controllers/users_controller.dart';
 import 'package:example/repositories/posts_repository.dart';
 import 'package:example/repositories/messages_repository.dart';
 import 'package:example/repositories/messages_repository_imp.dart';
-import 'package:example/services/jwt_service.dart';
 
 class SpringDart {
-  late final controllers = <String, Handler>{
-    '/auth': AuthControllerProxy(
-      GetIt.instance.get<PasswordService>(),
-      GetIt.instance.get<UsersRepository>(),
-    ).handler,
-    '/users': UsersControllerProxy(
-      GetIt.instance.get<UsersRepository>(),
-      GetIt.instance.get<PostsRepository>(),
-      GetIt.instance.get<MessagesRepository>(),
-    ).handler,
-  };
+  final Router router;
 
-  Future<void> configurer() async {
-    final getIt = GetIt.instance;
+  SpringDart._(this.router);
 
-    getIt.registerFactory<SecurityConfiguration>(() => SecurityConfiguration());
-    getIt.registerFactory<PasswordService>(
-      () => getIt.get<SecurityConfiguration>().password(),
+  static Future<SpringDart> create() async {
+    final router = Router();
+
+    // Configurations
+
+    final SecurityConfiguration securityConfiguration = SecurityConfiguration();
+
+    // Beans
+
+    final PasswordService passwordService = securityConfiguration.password();
+
+    // Repositories
+
+    final MessagesRepository messagesRepository = MessagesRepositoryImp();
+    final PostsRepository postsRepository = PostsRepository();
+    final UsersRepository usersRepository = UsersRepository();
+
+    // Services
+
+    // Controllers
+
+    final authController = _$AuthController(passwordService, usersRepository);
+
+    router.mount('/auth', authController.handler);
+
+    final coordinatesController = _$CoordinatesController();
+
+    router.mount('/coordinates', coordinatesController.handler);
+
+    final usersController = _$UsersController(
+      usersRepository,
+      postsRepository,
+      messagesRepository,
     );
-    getIt.registerFactory<MessagesRepository>(() => MessagesRepositoryImp());
-    getIt.registerFactory<PostsRepository>(() => PostsRepository());
-    getIt.registerFactory<UsersRepository>(() => UsersRepository());
-    getIt.registerFactory<JwtService>(() => JwtService());
+
+    router.mount('/users', usersController.handler);
+
+    return SpringDart._(router);
   }
 
   Future<HttpServer> start({Object host = '0.0.0.0', int port = 8080}) async {
-    final Router router = Router();
-
-    for (final controller in controllers.entries) {
-      router.mount(controller.key, controller.value);
-    }
-
-    return await serve(router.call, host, port);
+    final handler = Pipeline()
+        .addMiddleware(logRequests())
+        .addHandler(router.call);
+    return await serve(handler, host, port);
   }
 }
 
-class AuthControllerProxy extends AuthController {
-  const AuthControllerProxy(super.passwordService, super.users);
+class _$AuthController extends AuthController {
+  const _$AuthController(super.passwordService, super.users);
 
   Handler get handler {
     final router = Router();
 
     router.post('/sign-in', (Request request) async {
-      final body = json.decode(await request.readAsString());
-
-      final dto = SignInDto(body['email'], body['password']);
-
+      final $json = await request.readAsString();
+      final $body = Map<String, dynamic>.from(json.decode($json));
+      final $dson = DSON();
+      final dto = $dson.fromJson<SignInDto>($body, SignInDto.new);
       return signIn(dto);
     });
 
     router.post('/sign-up', (Request request) async {
-      final body = json.decode(await request.readAsString());
-
-      final dto = SignUpDto(
-        name: body['name'],
-        email: body['email'],
-        password: body['password'],
-      );
-
+      final $json = await request.readAsString();
+      final $body = Map<String, dynamic>.from(json.decode($json));
+      final $dson = DSON();
+      final dto = $dson.fromJson<SignUpDto>($body, SignUpDto.new);
       return signUp(dto);
     });
 
     router.post('/refresh-token', (Request request) async {
-      return refreshToken(request);
+      final $json = await request.readAsString();
+      final $body = Map<String, dynamic>.from(json.decode($json));
+      final $dson = DSON();
+      final dto = $dson.fromJson<RefreshTokenDto>(
+        $body,
+        RefreshTokenDto.new,
+        aliases: {
+          RefreshTokenDto: {'refreshToken': 'refresh_token'},
+        },
+      );
+      return refreshToken(dto);
     });
 
     router.get('/<id>', (Request request, String id) async {
@@ -90,32 +114,36 @@ class AuthControllerProxy extends AuthController {
 
     router.get('/users', (Request request) async {
       final name = request.url.queryParameters['name'];
-
       return findManyUsers(name);
     });
 
     router.post('/posts/<id>/create', (Request request, String id) async {
       final lang = request.url.queryParameters['lang'];
       final authorization = request.headers['authorization'];
-      final age = request.context['age'] as int;
-      final body = json.decode(await request.readAsString());
-
-      final dto = CreatePostDto(title: body['title'], content: body['content']);
-
-      return createPost(id, lang, age, authorization, dto);
+      final $json = await request.readAsString();
+      final $body = Map<String, dynamic>.from(json.decode($json));
+      final dateTimeParser = DateTimeParser();
+      $body['created_at'] = dateTimeParser.decode($body['created_at']);
+      final $dson = DSON();
+      final dto = $dson.fromJson<CreatePostDto>(
+        $body,
+        CreatePostDto.new,
+        aliases: {
+          CreatePostDto: {'createdAt': 'created_at'},
+        },
+      );
+      return createPost(id, lang, authorization, dto);
     });
 
     router.put('/posts/<id>/update', (Request request, String id) async {
-      final body =
-          json.decode(await request.readAsString()) as Map<String, dynamic>;
-
+      final $json = await request.readAsString();
+      final body = Map<String, dynamic>.from(json.decode($json));
       return updatePost(id, body);
     });
 
-    router.delete('/posts/<id>/delete', (Request request, String id) async {
-      final body =
-          json.decode(await request.readAsString()) as Map<String, dynamic>;
-
+    router.post('/posts/<id>/delete', (Request request, String id) async {
+      final $json = await request.readAsString();
+      final body = Map<String, dynamic>.from(json.decode($json));
       return deletePost(id, body);
     });
 
@@ -123,8 +151,22 @@ class AuthControllerProxy extends AuthController {
   }
 }
 
-class UsersControllerProxy extends UsersController {
-  const UsersControllerProxy(super.users, super.posts, super.messages);
+class _$CoordinatesController extends CoordinatesController {
+  _$CoordinatesController();
+
+  Handler get handler {
+    final router = Router();
+
+    router.get('/current', (Request request) async {
+      return current(request);
+    });
+
+    return router.call;
+  }
+}
+
+class _$UsersController extends UsersController {
+  const _$UsersController(super.users, super.posts, super.messages);
 
   Handler get handler {
     final router = Router();
@@ -134,7 +176,6 @@ class UsersControllerProxy extends UsersController {
       final age = request.url.queryParameters['age'];
       final email = request.url.queryParameters['email'];
       final password = request.url.queryParameters['password'];
-
       return findMany(name, age, email, password);
     });
 
@@ -144,9 +185,8 @@ class UsersControllerProxy extends UsersController {
 
     router.post('/', (Request request) async {
       final userId = request.context['user_id'] as String;
-      final body =
-          json.decode(await request.readAsString()) as Map<String, dynamic>;
-
+      final $json = await request.readAsString();
+      final body = Map<String, dynamic>.from(json.decode($json));
       return create(userId, body);
     });
 

@@ -1,6 +1,6 @@
 name: spring_dart
 description: A starting point for Dart libraries or applications.
-version: 1.0.0
+version: 0.0.1
 
 resolution: workspace
 
@@ -9,7 +9,6 @@ environment:
 
 dependencies:
   spring_dart_core:
-  get_it: ^8.2.0
 
 dev_dependencies:
   lints: ^5.0.0

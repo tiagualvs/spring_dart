@@ -23,7 +23,7 @@ class UsersController {
 
   @Get('/<id|[0-9]>')
   Future<Response> findOne(@Param('id') String id) async {
-    return Response.ok('Test');
+    return Json(200, body: {'id': id});
   }
 
   @Post('/')

@@ -15,9 +15,8 @@
     },
     {
       "name": "spring_dart",
-      "version": "1.0.0",
+      "version": "0.0.1",
       "dependencies": [
-        "get_it",
         "spring_dart_core"
       ],
       "devDependencies": [
@@ -29,6 +28,7 @@
       "name": "example",
       "version": "1.0.0",
       "dependencies": [
+        "postgres",
         "spring_dart"
       ],
       "devDependencies": [
@@ -40,8 +40,9 @@
     },
     {
       "name": "spring_dart_core",
-      "version": "1.0.0",
+      "version": "0.0.1",
       "dependencies": [
+        "dson_adapter",
         "shelf",
         "shelf_router"
       ],
@@ -52,7 +53,7 @@
     },
     {
       "name": "spring_dart_gen",
-      "version": "1.0.0",
+      "version": "0.0.1",
       "dependencies": [
         "analyzer",
         "build",
@@ -217,6 +218,11 @@
       ]
     },
     {
+      "name": "dson_adapter",
+      "version": "1.2.0+2",
+      "dependencies": []
+    },
+    {
       "name": "build_runner",
       "version": "2.7.0",
       "dependencies": [
@@ -249,12 +255,19 @@
       ]
     },
     {
-      "name": "get_it",
-      "version": "8.2.0",
+      "name": "postgres",
+      "version": "3.5.6",
       "dependencies": [
         "async",
+        "buffer",
+        "charcode",
         "collection",
-        "meta"
+        "crypto",
+        "meta",
+        "pool",
+        "sasl_scram",
+        "stack_trace",
+        "stream_channel"
       ]
     },
     {
@@ -695,6 +708,26 @@
       ]
     },
     {
+      "name": "charcode",
+      "version": "1.4.0",
+      "dependencies": []
+    },
+    {
+      "name": "sasl_scram",
+      "version": "0.1.1",
+      "dependencies": [
+        "buffer",
+        "collection",
+        "crypto",
+        "saslprep"
+      ]
+    },
+    {
+      "name": "buffer",
+      "version": "1.2.3",
+      "dependencies": []
+    },
+    {
       "name": "web_socket",
       "version": "1.0.1",
       "dependencies": [
@@ -791,6 +824,13 @@
       ]
     },
     {
+      "name": "saslprep",
+      "version": "1.0.3",
+      "dependencies": [
+        "unorm_dart"
+      ]
+    },
+    {
       "name": "posix",
       "version": "6.0.3",
       "dependencies": [
@@ -798,6 +838,11 @@
         "meta",
         "path"
       ]
+    },
+    {
+      "name": "unorm_dart",
+      "version": "0.3.1+1",
+      "dependencies": []
     },
     {
       "name": "ffi",

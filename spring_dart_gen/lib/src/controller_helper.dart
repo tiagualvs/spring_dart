@@ -1,8 +1,14 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:spring_dart_gen/src/checkers.dart';
+import 'package:spring_dart_gen/src/extensions/iterable_ext.dart';
+import 'package:spring_dart_gen/src/extensions/string_ext.dart';
 
-String controllerHelper(ClassElement element, Set<String> imports, Set<String> controllers) {
+String controllerHelper(
+  ClassElement element,
+  Set<String> imports,
+  Set<String> controllers,
+) {
   final constructors = element.constructors;
   final controllerPath = controllerChecker.firstAnnotationOf(element)?.getField('path')?.toStringValue() ?? '';
   final controllerClassName = element.name;
@@ -12,16 +18,20 @@ String controllerHelper(ClassElement element, Set<String> imports, Set<String> c
   final constructorParams = switch (constructors.isNotEmpty) {
     true => constructors.first.formalParameters.map((p) {
       imports.add(p.type.element?.library?.uri.toString() ?? '-');
-      final found = 'GetIt.instance.get<${p.type.getDisplayString()}>()';
+      final found = p.type.getDisplayString().toCamelCase();
       return p.isNamed ? '${p.name}: $found' : found;
     }).toList(),
     false => <String>[],
   };
 
-  controllers.add('\'$controllerPath\': ${controllerClassName}Proxy(${constructorParams.join(', ')}).handler');
+  controllers.add(
+    'final ${controllerClassName?.toCamelCase()} = _\$$controllerClassName(${constructorParams.join(', ')})',
+  );
 
-  return '''class ${controllerClassName}Proxy extends $controllerClassName {
-      ${constructors.isNotEmpty ? '''${constructors.first.isConst ? 'const ' : ''}${controllerClassName}Proxy(${constructors.first.formalParameters.map((p) {
+  controllers.add('router.mount(\'$controllerPath\', ${controllerClassName?.toCamelCase()}.handler)');
+
+  return '''class _\$$controllerClassName extends $controllerClassName {
+      ${constructors.isNotEmpty ? '''${constructors.first.isConst ? 'const ' : ''}_\$$controllerClassName(${constructors.first.formalParameters.map((p) {
           return switch (p.isNamed) {
             true => '${p.name}: this.${p.name}',
             false => 'super.${p.name}',
@@ -92,154 +102,143 @@ String controllerHelper(ClassElement element, Set<String> imports, Set<String> c
       };
     });
 
-    // GET METHOD
-    if (getChecker.hasAnnotationOf(method)) {
-      final routePath = getChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() ?? '';
-      return '''router.get('$routePath', (Request request$paramsString) async {
-      ${queryParameters.map((q) {
-        return '''    final ${q.name} = request.url.queryParameters['${q.name}'];''';
-      }).join('\n')}
-      ${headers.map((h) {
-        return '''    final ${h.name} = request.headers['${h.name}'];''';
-      }).join('\n')}
-      ${contexts.map((c) {
-        return '''    final ${c.context.name} = request.context['${c.name}'] as ${c.context.type.getDisplayString()};''';
-      }).join('\n')}
-      return ${method.name}(${routeParams.join(', ')});
-  });''';
-    }
+    if (getChecker.hasAnnotationOf(method) //
+        || postChecker.hasAnnotationOf(method) //
+        || putChecker.hasAnnotationOf(method) //
+        || deleteChecker.hasAnnotationOf(method) //
+        || patchChecker.hasAnnotationOf(method) //
+        || headChecker.hasAnnotationOf(method) //
+        || optionsChecker.hasAnnotationOf(method) //
+        || traceChecker.hasAnnotationOf(method) //
+        || connectChecker.hasAnnotationOf(method) //
+        ) {
+      final annotation = getChecker.firstAnnotationOf(method) //
+          ?? postChecker.firstAnnotationOf(method) //
+          ?? putChecker.firstAnnotationOf(method) //
+          ?? deleteChecker.firstAnnotationOf(method) //
+          ?? patchChecker.firstAnnotationOf(method) //
+          ?? headChecker.firstAnnotationOf(method) //
+          ?? optionsChecker.firstAnnotationOf(method) //
+          ?? traceChecker.firstAnnotationOf(method) //
+          ?? connectChecker.firstAnnotationOf(method);
 
-    // POST METHOD
-    if (postChecker.hasAnnotationOf(method)) {
-      final routePath = postChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() ?? '';
+      final verb = switch (annotation?.type?.getDisplayString()) {
+        'Post' => 'post',
+        'Put' => 'put',
+        'Delete' => 'delete',
+        'Get' => 'get',
+        'Patch' => 'patch',
+        'Head' => 'head',
+        'Options' => 'options',
+        'Trace' => 'trace',
+        'Connect' => 'connect',
+        _ => 'get',
+      };
 
-      return '''router.post('$routePath', (Request request$paramsString) async {
-      ${queryParameters.map((q) {
-        return '''    final ${q.name} = request.url.queryParameters['${q.name}'];''';
-      }).join('\n')}
-      ${headers.map((h) {
-        return '''    final ${h.name} = request.headers['${h.name}'];''';
-      }).join('\n')}
-      ${contexts.map((c) {
-        return '''    final ${c.context.name} = request.context['${c.name}'] as ${c.context.type.getDisplayString()};''';
-      }).join('\n')}
-      ${dtos.map((p) {
-        final dtoType = p.type.getDisplayString();
-        final dtoName = p.name;
+      final methodBuffer = StringBuffer();
+      final routePath = getChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
+          ?? postChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
+          ?? putChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
+          ?? deleteChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
+          ?? patchChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
+          ?? headChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
+          ?? optionsChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
+          ?? traceChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
+          ?? connectChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
+          ?? '';
 
-        if (!jsonChecker.isExactlyType(p.type)) {
-          imports.add(p.type.element?.library?.uri.toString() ?? '');
+      methodBuffer.write(
+        switch (queryParameters.isEmpty) {
+          true => '',
+          false => queryParameters.map((q) {
+            return '''    final ${q.name} = request.url.queryParameters['${q.name}'];''';
+          }).join('\n'),
+        },
+      );
 
-          return '''  final body = json.decode(await request.readAsString());
+      methodBuffer.write(
+        switch (headers.isEmpty) {
+          true => '',
+          false => headers.map((h) {
+            return '''    final ${h.name} = request.headers['${h.name}'];''';
+          }).join('\n'),
+        },
+      );
 
-        final $dtoName = $dtoType(
-          ${classElementToString(p.type.element as ClassElement)}
-        );''';
-        } else {
-          return '''  final $dtoName = json.decode(await request.readAsString()) as Map<String, dynamic>;''';
-        }
-      }).join('\n')}
+      methodBuffer.write(
+        switch (contexts.isEmpty) {
+          true => '',
+          false => contexts.map((c) {
+            return '''final ${c.context.name} = request.context['${c.name}'] as ${c.context.type.getDisplayString()};''';
+          }).join('\n'),
+        },
+      );
 
+      methodBuffer.write(
+        switch (dtos.isEmpty) {
+          true => '',
+          false => dtos.map((p) {
+            final dtoType = p.type.getDisplayString();
+            final dtoName = p.name;
+
+            if (!jsonChecker.isExactlyType(p.type)) {
+              imports.add(p.type.element?.library?.uri.toString() ?? '');
+
+              final keys = (p.type.element as ClassElement).fields.where((f) => jsonKeyChecker.hasAnnotationOf(f)).map((f) => (
+                field: f,
+                key: jsonKeyChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? '',
+              )).toList();
+
+              final parsers = (p.type.element as ClassElement).fields.where((f) => withParserChecker.hasAnnotationOf(f)).map((f) => (
+                field: f,
+                type: withParserChecker.firstAnnotationOf(f)?.getField('parser')?.toTypeValue()!,
+              )).toList();
+
+              for (final parser in parsers) {
+                imports.add(parser.type?.element?.library?.uri.toString() ?? '');
+              }
+
+              return '''
+          final \$json = await request.readAsString();
+          final \$body = Map<String, dynamic>.from(json.decode(\$json));${switch (parsers.isEmpty) {
+                true => '',
+                false => parsers.map((p) {
+                  final key = keys.firstWhereOrNull((k) => k.field.name == p.field.name)?.key ?? p.field.name;
+
+                  return '''final ${p.type?.getDisplayString().toCamelCase()} = ${p.type?.getDisplayString()}();
+          \$body['$key'] = ${p.type?.getDisplayString().toCamelCase()}.decode(\$body['$key']);''';
+                }).join('\n'),
+              }}
+          final \$dson = DSON();
+          final $dtoName = \$dson.fromJson<$dtoType>(
+            \$body, 
+            $dtoType.new,
+            ${switch (keys.isNotEmpty) {
+                true => '''aliases: {
+                ${keys.map((k) {
+                  return '''${p.type.getDisplayString()}: {'${k.field.name}' : '${k.key}'},''';
+                }).join(',\n')}
+              }''',
+                false => '',
+              }}
+          );''';
+            } else {
+              return '''
+          final \$json = await request.readAsString();
+          final $dtoName = Map<String, dynamic>.from(json.decode(\$json));''';
+            }
+          }).join('\n'),
+        },
+      );
+
+      return '''router.$verb('$routePath', (Request request$paramsString) async {
+        $methodBuffer
         return ${method.name}(${routeParams.join(', ')});
       });''';
     }
-
-    if (putChecker.hasAnnotationOf(method)) {
-      final routePath = putChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() ?? '';
-
-      return '''router.put('$routePath', (Request request$paramsString) async {
-      ${queryParameters.map((q) {
-        return '''    final ${q.name} = request.url.queryParameters['${q.name}'];''';
-      }).join('\n')}
-      ${headers.map((h) {
-        return '''    final ${h.name} = request.headers['${h.name}'];''';
-      }).join('\n')}
-      ${contexts.map((c) {
-        return '''    final ${c.context.name} = request.context['${c.name}'] as ${c.context.type.getDisplayString()};''';
-      }).join('\n')}
-      ${dtos.map((p) {
-        final dtoType = p.type.getDisplayString();
-        final dtoName = p.name;
-
-        if (!jsonChecker.isExactlyType(p.type)) {
-          imports.add(p.type.element?.library?.uri.toString() ?? '');
-
-          return '''  final body = json.decode(await request.readAsString());
-
-        final $dtoName = $dtoType(
-          ${classElementToString(p.type.element as ClassElement)}
-        );''';
-        } else {
-          return '''  final $dtoName = json.decode(await request.readAsString()) as Map<String, dynamic>;''';
-        }
-      }).join('\n')}
-
-        return ${method.name}(${routeParams.join(', ')});
-      });''';
-    }
-
-    if (deleteChecker.hasAnnotationOf(method)) {
-      final routePath = deleteChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() ?? '';
-
-      return '''router.delete('$routePath', (Request request$paramsString) async {
-      ${queryParameters.map((q) {
-        return '''    final ${q.name} = request.url.queryParameters['${q.name}'];''';
-      }).join('\n')}
-      ${headers.map((h) {
-        return '''    final ${h.name} = request.headers['${h.name}'];''';
-      }).join('\n')}
-      ${contexts.map((c) {
-        return '''    final ${c.context.name} = request.context['${c.name}'] as ${c.context.type.getDisplayString()};''';
-      }).join('\n')}
-      ${dtos.map((p) {
-        final dtoType = p.type.getDisplayString();
-        final dtoName = p.name;
-
-        if (!jsonChecker.isExactlyType(p.type)) {
-          imports.add(p.type.element?.library?.uri.toString() ?? '');
-
-          return '''  final body = json.decode(await request.readAsString());
-
-        final $dtoName = $dtoType(
-          ${classElementToString(p.type.element as ClassElement)}
-        );''';
-        } else {
-          return '''  final $dtoName = json.decode(await request.readAsString()) as Map<String, dynamic>;''';
-        }
-      }).join('\n')}
-
-       return ${method.name}(${routeParams.join(', ')});
-      });''';
-    }
-
-    if (patchChecker.hasAnnotationOf(method)) {}
-
-    if (headChecker.hasAnnotationOf(method)) {}
-
-    if (optionsChecker.hasAnnotationOf(method)) {}
-
-    if (traceChecker.hasAnnotationOf(method)) {}
-
-    if (connectChecker.hasAnnotationOf(method)) {}
   }).join('\n\n')}
 
         return router.call;
       }
   }''';
-}
-
-String classElementToString(ClassElement element) {
-  final className = element.name;
-  final constructors = element.constructors;
-  if (constructors.isEmpty) throw StateError('Class $className has no constructors.');
-  final constructor = constructors.first;
-  final content = List.from(
-    constructor.formalParameters.map((e) {
-      return switch (e.isNamed) {
-        true => '${e.name}: body[\'${e.name}\']',
-        false => 'body[\'${e.name}\']',
-      };
-    }),
-  );
-  return content.join(',\n');
 }

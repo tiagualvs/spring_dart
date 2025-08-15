@@ -24,6 +24,8 @@ final headerChecker = TypeChecker.typeNamed(Header, inPackage: 'spring_dart_core
 final contextChecker = TypeChecker.typeNamed(Context, inPackage: 'spring_dart_core');
 
 final dtoChecker = TypeChecker.typeNamed(Dto, inPackage: 'spring_dart_core');
+final jsonKeyChecker = TypeChecker.typeNamed(JsonKey, inPackage: 'spring_dart_core');
+final withParserChecker = TypeChecker.typeNamed(WithParser, inPackage: 'spring_dart_core');
 
 final requestChecker = TypeChecker.typeNamed(Request, inPackage: 'shelf');
 final responseChecker = TypeChecker.typeNamed(Response, inPackage: 'shelf');

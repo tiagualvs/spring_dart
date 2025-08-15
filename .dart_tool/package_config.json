@@ -38,6 +38,12 @@
       "languageVersion": "3.1"
     },
     {
+      "name": "buffer",
+      "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/buffer-1.2.3",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "build",
       "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/build-3.0.2",
       "packageUri": "lib/",
@@ -92,6 +98,12 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "charcode",
+      "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/charcode-1.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "checked_yaml",
       "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/checked_yaml-2.0.4",
       "packageUri": "lib/",
@@ -140,6 +152,12 @@
       "languageVersion": "3.7"
     },
     {
+      "name": "dson_adapter",
+      "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/dson_adapter-1.2.0+2",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
       "name": "ffi",
       "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/ffi-2.1.4",
       "packageUri": "lib/",
@@ -160,12 +178,6 @@
     {
       "name": "frontend_server_client",
       "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/frontend_server_client-4.0.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.0"
-    },
-    {
-      "name": "get_it",
-      "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/get_it-8.2.0",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -278,6 +290,12 @@
       "languageVersion": "3.0"
     },
     {
+      "name": "postgres",
+      "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/postgres-3.5.6",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "pub_semver",
       "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/pub_semver-2.2.0",
       "packageUri": "lib/",
@@ -288,6 +306,18 @@
       "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/pubspec_parse-1.5.0",
       "packageUri": "lib/",
       "languageVersion": "3.6"
+    },
+    {
+      "name": "sasl_scram",
+      "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/sasl_scram-0.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "saslprep",
+      "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/saslprep-1.0.3",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
     },
     {
       "name": "shelf",
@@ -420,6 +450,12 @@
       "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/unicode-1.1.8",
       "packageUri": "lib/",
       "languageVersion": "3.0"
+    },
+    {
+      "name": "unorm_dart",
+      "rootUri": "file:///C:/Users/tiago/AppData/Local/Pub/Cache/hosted/pub.dev/unorm_dart-0.3.1+1",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
     },
     {
       "name": "vm_service",

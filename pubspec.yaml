@@ -1,0 +1,11 @@
+name: _
+description: Spring Boot like make with Dart!
+
+environment: 
+  sdk: ^3.8.1
+
+workspace:
+  - spring_dart
+  - spring_dart/example
+  - spring_dart_core
+  - spring_dart_gen

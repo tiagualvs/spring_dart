@@ -2,7 +2,7 @@ name: _
 description: Spring Boot like make with Dart!
 
 environment: 
-  sdk: ^3.8.1
+  sdk: ^3.9.0
 
 workspace:
   - spring_dart

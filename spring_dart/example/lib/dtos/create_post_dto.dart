@@ -6,7 +6,7 @@ class CreatePostDto {
   final String title;
   final String content;
   @JsonKey('created_at')
-  @WithParser(DateTimeParser)
+  @WithParser(TimestampToDateTimeParser)
   final DateTime createdAt;
 
   const CreatePostDto({required this.title, required this.content, required this.createdAt});

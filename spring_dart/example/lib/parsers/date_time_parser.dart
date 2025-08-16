@@ -1,13 +1,15 @@
 import 'package:spring_dart/spring_dart.dart';
 
-class DateTimeParser extends ParamParser<DateTime> {
+class TimestampToDateTimeParser extends IntParser<DateTime> {
   @override
-  DateTime? decode(String? value) {
-    return DateTime.tryParse(value ?? '');
+  DateTime? decode(int? value) {
+    if (value == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(value * 1000);
   }
 
   @override
-  String? encode(DateTime? value) {
-    return value?.toIso8601String();
+  int? encode(DateTime? value) {
+    if (value == null) return null;
+    return value.millisecondsSinceEpoch ~/ 1000;
   }
 }

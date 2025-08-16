@@ -14,6 +14,11 @@ class Repository {
   const Repository();
 }
 
+/// `@Component`
+class Component {
+  const Component();
+}
+
 /// `@Configuration`
 class Configuration {
   const Configuration();
@@ -125,7 +130,7 @@ class WithParser {
 }
 
 /// `@WithMiddleware`
-class WithMiddleware {
-  final Type middleware;
-  const WithMiddleware(this.middleware);
+class WithFilter {
+  final Type filter;
+  const WithFilter(this.filter);
 }

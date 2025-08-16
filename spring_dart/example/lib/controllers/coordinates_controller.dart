@@ -1,9 +1,7 @@
 import 'dart:math';
 
-import 'package:example/middlewares/log_middleware.dart';
 import 'package:spring_dart/spring_dart.dart';
 
-@WithMiddleware(LogMiddleware)
 @Controller('/coordinates')
 class CoordinatesController {
   const CoordinatesController();

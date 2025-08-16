@@ -6,6 +6,7 @@ export 'package:shelf/shelf_io.dart';
 export 'package:shelf_router/shelf_router.dart';
 
 export 'src/annotations.dart';
+export 'src/config/spring_dart_configuration.dart';
+export 'src/filter.dart';
 export 'src/json.dart';
 export 'src/param_parser.dart';
-export 'src/spring_middleware.dart';

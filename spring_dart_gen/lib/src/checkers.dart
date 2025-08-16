@@ -4,6 +4,7 @@ import 'package:spring_dart_core/spring_dart_core.dart';
 final controllerChecker = TypeChecker.typeNamed(Controller, inPackage: 'spring_dart_core');
 final repositoryChecker = TypeChecker.typeNamed(Repository, inPackage: 'spring_dart_core');
 final serviceChecker = TypeChecker.typeNamed(Service, inPackage: 'spring_dart_core');
+final componentChecker = TypeChecker.typeNamed(Component, inPackage: 'spring_dart_core');
 final configurationChecker = TypeChecker.typeNamed(Configuration, inPackage: 'spring_dart_core');
 final beanChecker = TypeChecker.typeNamed(Bean, inPackage: 'spring_dart_core');
 
@@ -30,8 +31,9 @@ final withParserChecker = TypeChecker.typeNamed(WithParser, inPackage: 'spring_d
 final requestChecker = TypeChecker.typeNamed(Request, inPackage: 'shelf');
 final responseChecker = TypeChecker.typeNamed(Response, inPackage: 'shelf');
 
-final withMiddlewareChecker = TypeChecker.typeNamed(WithMiddleware, inPackage: 'spring_dart_core');
-final springMiddlewareChecker = TypeChecker.typeNamed(SpringMiddleware, inPackage: 'spring_dart_core');
+final filterChecker = TypeChecker.typeNamed(Filter, inPackage: 'spring_dart_core');
+
+final springDartConfigurationChecker = TypeChecker.typeNamed(SpringDartConfiguration, inPackage: 'spring_dart_core');
 
 final stringChecker = TypeChecker.typeNamed(String);
 final jsonChecker = TypeChecker.typeNamed(Map<String, dynamic>);

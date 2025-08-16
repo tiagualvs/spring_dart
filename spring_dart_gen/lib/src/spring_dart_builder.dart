@@ -29,9 +29,13 @@ class SpringDartBuilder extends Builder {
 
     final services = <String>{};
 
+    final filters = <({String name, String className})>{};
+
     final controllers = <String>{};
 
     final repositories = <String>{};
+
+    final springDartConfiguration = <({String name, String className})>{};
 
     final content = await buildStep.findAssets(Glob('lib/**.dart')).asyncExpand((assetId) async* {
       final library = await buildStep.resolver.libraryFor(assetId);
@@ -40,6 +44,16 @@ class SpringDartBuilder extends Builder {
       for (final element in reader.classes) {
         if (controllerChecker.hasAnnotationOf(element)) {
           yield controllerHelper(element, imports, controllers);
+        } else if (componentChecker.hasAnnotationOf(element)) {
+          final className = element.name;
+
+          imports.add(element.library.uri.toString());
+
+          final superType = element.supertype;
+
+          if (superType != null && filterChecker.isExactly(superType.element)) {
+            filters.add((name: className?.toCamelCase() ?? '', className: className ?? ''));
+          }
         } else if (repositoryChecker.hasAnnotationOf(element)) {
           final className = element.name;
           final superClassName = element.interfaces.firstOrNull?.getDisplayString();
@@ -70,25 +84,31 @@ class SpringDartBuilder extends Builder {
 
           imports.add(element.library.uri.toString());
 
-          configurations.add('final ${className?.toCamelCase()} = $className()');
+          final superType = element.supertype;
 
-          for (final method in element.methods.where((m) => beanChecker.hasAnnotationOf(m))) {
-            final methodName = method.name;
-            final type = method.type;
-            final returnType = type.returnType;
+          if (superType != null && springDartConfigurationChecker.isExactly(superType.element)) {
+            springDartConfiguration.add((name: className?.toCamelCase() ?? '', className: className ?? ''));
+          } else {
+            configurations.add('final ${className?.toCamelCase()} = $className()');
 
-            if (returnType.isDartAsyncFuture || returnType.isDartAsyncFutureOr) {
-              final realReturnType = (returnType as ParameterizedType).typeArguments.first;
-              // imports.add(realReturnType.element?.library?.uri.toString() ?? '');
-              beans.add(
-                'final ${realReturnType.getDisplayString().toCamelCase()} = await ${className?.toCamelCase()}.$methodName()',
-              );
-            } else {
-              final methodReturnType = returnType.getDisplayString();
+            for (final method in element.methods.where((m) => beanChecker.hasAnnotationOf(m))) {
+              final methodName = method.name;
+              final type = method.type;
+              final returnType = type.returnType;
 
-              beans.add(
-                'final ${methodReturnType.toCamelCase()} = ${className?.toCamelCase()}.$methodName()',
-              );
+              if (returnType.isDartAsyncFuture || returnType.isDartAsyncFutureOr) {
+                final realReturnType = (returnType as ParameterizedType).typeArguments.first;
+                // imports.add(realReturnType.element?.library?.uri.toString() ?? '');
+                beans.add(
+                  'final ${realReturnType.getDisplayString().toCamelCase()} = await ${className?.toCamelCase()}.$methodName()',
+                );
+              } else {
+                final methodReturnType = returnType.getDisplayString();
+
+                beans.add(
+                  'final ${methodReturnType.toCamelCase()} = ${className?.toCamelCase()}.$methodName()',
+                );
+              }
             }
           }
         }
@@ -107,10 +127,14 @@ class SpringDartBuilder extends Builder {
 
     buffer.writeAll(imports.map((i) => 'import \'$i\';'), '\n');
 
-    buffer.writeln('''class SpringDart {
-  final Router router;
+    if (springDartConfiguration.length > 1) {
+      throw Exception('Only one SpringDartConfiguration is allowed!');
+    }
 
-  SpringDart._(this.router);
+    buffer.writeln('''class SpringDart {
+  final Handler handler;
+
+  SpringDart._(this.handler);
 
   static Future<SpringDart> create() async {
     final router = Router();${configurations.isNotEmpty ? '''\n// Configurations
@@ -118,13 +142,17 @@ class SpringDartBuilder extends Builder {
     ${beans.map((e) => '$e;').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
     ${repositories.map((e) => '$e;').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
     ${services.map((e) => '$e;').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers
-    ${controllers.map((e) => '$e;').join('\n')}''' : ''}
-    return SpringDart._(router);
+    ${controllers.map((e) => '$e;').join('\n')}''' : ''}${filters.isNotEmpty ? '''\n// Filters (Middlewares)
+    ${filters.map((e) => 'final ${e.name} = ${e.className}();').join('\n')}
+    final handler = Pipeline()${filters.map((e) {
+            return '''.addMiddleware(${e.name}.toShelfMiddleware)''';
+          }).join('\n')}.addHandler(router.call);
+    return SpringDart._(handler);''' : 'return SpringDart._(router.call);'}
   }
 
   Future<HttpServer> start({Object host = '0.0.0.0', int port = 8080}) async {
-    final handler = Pipeline().addMiddleware(logRequests()).addHandler(router.call);
-    return await serve(handler, host, port);
+    ${springDartConfiguration.map((e) => '''final ${e.name} = ${e.className}();
+    return await ${e.name}.setup(Next(handler));''').join('\n')}${springDartConfiguration.isEmpty ? 'return await serve(handler, host, port);' : ''}
   }    
 }''');
 

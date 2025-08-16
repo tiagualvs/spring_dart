@@ -4,24 +4,25 @@
 import 'package:spring_dart/spring_dart.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'package:example/config/server_configuration.dart';
 import 'package:example/configurations/security_configuration.dart';
 import 'package:example/controllers/auth_controller.dart';
+import 'dart:async';
 import 'package:example/dtos/sign_in_dto.dart';
 import 'package:example/dtos/sign_up_dto.dart';
 import 'package:example/dtos/refresh_token_dto.dart';
 import 'package:example/dtos/create_post_dto.dart';
 import 'package:example/parsers/date_time_parser.dart';
 import 'package:example/controllers/coordinates_controller.dart';
-import 'package:example/middlewares/log_middleware.dart';
 import 'package:example/controllers/users_controller.dart';
 import 'package:example/repositories/messages_repository_imp.dart';
 import 'package:example/repositories/posts_repository.dart';
 import 'package:example/repositories/users_repository.dart';
 
 class SpringDart {
-  final Router router;
+  final Handler handler;
 
-  SpringDart._(this.router);
+  SpringDart._(this.handler);
 
   static Future<SpringDart> create() async {
     final router = Router();
@@ -44,21 +45,19 @@ class SpringDart {
       messagesRepository,
     );
     router.mount('/users', usersController.handler);
-    return SpringDart._(router);
+    return SpringDart._(router.call);
   }
 
   Future<HttpServer> start({Object host = '0.0.0.0', int port = 8080}) async {
-    final handler = Pipeline()
-        .addMiddleware(logRequests())
-        .addHandler(router.call);
-    return await serve(handler, host, port);
+    final serverConfiguration = ServerConfiguration();
+    return await serverConfiguration.setup(Next(handler));
   }
 }
 
 class _$AuthController extends AuthController {
   const _$AuthController(super.passwordService, super.users);
 
-  Handler get handler {
+  FutureOr<Response> handler(Request request) async {
     final router = Router();
 
     router.post('/sign-in', (Request request) async {
@@ -105,8 +104,10 @@ class _$AuthController extends AuthController {
       final authorization = request.headers['authorization'];
       final $json = await request.readAsString();
       final $body = Map<String, dynamic>.from(json.decode($json));
-      final dateTimeParser = DateTimeParser();
-      $body['created_at'] = dateTimeParser.decode($body['created_at']);
+      final timestampToDateTimeParser = TimestampToDateTimeParser();
+      $body['created_at'] = timestampToDateTimeParser.decode(
+        $body['created_at'],
+      );
       final $dson = DSON();
       final dto = $dson.fromJson<CreatePostDto>(
         $body,
@@ -129,33 +130,27 @@ class _$AuthController extends AuthController {
       final body = Map<String, dynamic>.from(json.decode($json));
       return deletePost(id, body);
     });
-
-    return router.call;
+    return router.call(request);
   }
 }
 
 class _$CoordinatesController extends CoordinatesController {
   const _$CoordinatesController();
 
-  Handler get handler {
+  FutureOr<Response> handler(Request request) async {
     final router = Router();
 
     router.get('/current', (Request request) async {
       return current(request);
     });
-
-    Handler handler;
-
-    handler = LogMiddleware().handler(router.call);
-
-    return handler;
+    return router.call(request);
   }
 }
 
 class _$UsersController extends UsersController {
   const _$UsersController(super.users, super.posts, super.messages);
 
-  Handler get handler {
+  FutureOr<Response> handler(Request request) async {
     final router = Router();
 
     router.get('/', (Request request) async {
@@ -176,7 +171,6 @@ class _$UsersController extends UsersController {
       final body = Map<String, dynamic>.from(json.decode($json));
       return create(userId, body);
     });
-
-    return router.call;
+    return router.call(request);
   }
 }

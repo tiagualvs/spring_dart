@@ -121,8 +121,6 @@ class SpringDartBuilder extends Builder {
 
     buffer.writeln('import \'package:spring_dart/spring_dart.dart\';');
 
-    buffer.writeln('import \'dart:io\';');
-
     buffer.writeln('import \'dart:convert\';');
 
     buffer.writeAll(imports.map((i) => 'import \'$i\';'), '\n');
@@ -132,28 +130,23 @@ class SpringDartBuilder extends Builder {
     }
 
     buffer.writeln('''class SpringDart {
-  final Handler handler;
+  const SpringDart._();
 
-  SpringDart._(this.handler);
-
-  static Future<SpringDart> create() async {
+  static Future<void> start() async {
     final router = Router();${configurations.isNotEmpty ? '''\n// Configurations
     ${configurations.map((e) => '$e;').join('\n')}''' : ''}${beans.isNotEmpty ? '''\n// Beans
     ${beans.map((e) => '$e;').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
     ${repositories.map((e) => '$e;').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
     ${services.map((e) => '$e;').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers
-    ${controllers.map((e) => '$e;').join('\n')}''' : ''}${filters.isNotEmpty ? '''\n// Filters (Middlewares)
+    ${controllers.map((e) => '$e;').join('\n')}''' : ''}
+    // Server Configuration
+    Handler handler = router.call;${filters.isNotEmpty ? '''\n// Filters (Middlewares)
     ${filters.map((e) => 'final ${e.name} = ${e.className}();').join('\n')}
-    final handler = Pipeline()${filters.map((e) {
+    handler = Pipeline()${filters.map((e) {
             return '''.addMiddleware(${e.name}.toShelfMiddleware)''';
-          }).join('\n')}.addHandler(router.call);
-    return SpringDart._(handler);''' : 'return SpringDart._(router.call);'}
-  }
-
-  Future<HttpServer> start({Object host = '0.0.0.0', int port = 8080}) async {
-    ${springDartConfiguration.map((e) => '''final ${e.name} = ${e.className}();
-    return await ${e.name}.setup(Next(handler));''').join('\n')}${springDartConfiguration.isEmpty ? 'return await serve(handler, host, port);' : ''}
-  }    
+          }).join('\n')}.addHandler(handler);''' : ''}${springDartConfiguration.isEmpty ? '''await Next(;handler).call();''' : springDartConfiguration.map((e) => '''final ${e.name} = ${e.className}();
+    await ${e.name}.setup(Next(handler));''').join('\n')}
+  }   
 }''');
 
     buffer.writeln(content.join('\n\n'));

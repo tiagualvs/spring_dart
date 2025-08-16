@@ -2,9 +2,9 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'package:spring_dart/spring_dart.dart';
-import 'dart:io';
 import 'dart:convert';
 import 'package:example/config/server_configuration.dart';
+import 'package:example/configurations/filter.dart';
 import 'package:example/configurations/security_configuration.dart';
 import 'package:example/controllers/auth_controller.dart';
 import 'dart:async';
@@ -20,11 +20,9 @@ import 'package:example/repositories/posts_repository.dart';
 import 'package:example/repositories/users_repository.dart';
 
 class SpringDart {
-  final Handler handler;
+  const SpringDart._();
 
-  SpringDart._(this.handler);
-
-  static Future<SpringDart> create() async {
+  static Future<void> start() async {
     final router = Router();
     // Configurations
     final securityConfiguration = SecurityConfiguration();
@@ -45,12 +43,15 @@ class SpringDart {
       messagesRepository,
     );
     router.mount('/users', usersController.handler);
-    return SpringDart._(router.call);
-  }
-
-  Future<HttpServer> start({Object host = '0.0.0.0', int port = 8080}) async {
+    // Server Configuration
+    Handler handler = router.call;
+    // Filters (Middlewares)
+    final authFilter = AuthFilter();
+    handler = Pipeline()
+        .addMiddleware(authFilter.toShelfMiddleware)
+        .addHandler(handler);
     final serverConfiguration = ServerConfiguration();
-    return await serverConfiguration.setup(Next(handler));
+    await serverConfiguration.setup(Next(handler));
   }
 }
 

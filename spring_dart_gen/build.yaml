@@ -1,7 +1,13 @@
 builders:
-  spring_dart_builder:
+  # spring_dart_builder:
+  #   import: "package:spring_dart_gen/spring_dart_gen.dart"
+  #   builder_factories: ["springDartBuilder"]
+  #   build_extensions: {"$package$": ["lib/spring_dart.dart"]}
+  #   auto_apply: root_package
+  #   build_to: source
+  server_builder:
     import: "package:spring_dart_gen/spring_dart_gen.dart"
-    builder_factories: ["springDartBuilder"]
-    build_extensions: {"$package$": ["lib/spring_dart.dart"]}
+    builder_factories: ["serverBuilder"]
+    build_extensions: {"$package$": ["bin/$package$.dart"]}
     auto_apply: root_package
     build_to: source

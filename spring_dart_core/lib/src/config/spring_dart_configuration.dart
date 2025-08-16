@@ -3,18 +3,24 @@ import 'dart:io';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
 
-class Next {
+class SpringDart {
   final Handler handler;
 
-  const Next(this.handler);
+  const SpringDart(this.handler);
 
-  Future<HttpServer> call({Object host = '0.0.0.0', int port = 8080}) async {
+  Future<HttpServer> start({Object host = '0.0.0.0', int port = 8080}) async {
     return await serve(handler, host, port);
   }
 }
 
 abstract class SpringDartConfiguration {
-  Future<HttpServer> setup(Next next) {
-    return next();
+  Future<void> setup(SpringDart spring) {
+    return spring.start();
   }
+
+  List<Middleware> get middlewares => [logRequests()];
+
+  static SpringDartConfiguration get defaultConfiguration => _DefaultSpringDartConfiguration();
 }
+
+class _DefaultSpringDartConfiguration extends SpringDartConfiguration {}

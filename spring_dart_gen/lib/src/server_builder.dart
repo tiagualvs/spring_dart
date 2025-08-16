@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
@@ -6,16 +7,24 @@ import 'package:dart_style/dart_style.dart';
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:source_gen/source_gen.dart';
-import 'package:spring_dart_gen/src/checkers.dart';
-import 'package:spring_dart_gen/src/extensions/string_ext.dart';
 
+import 'checkers.dart';
 import 'controller_helper.dart';
+import 'extensions/string_ext.dart';
 
-class SpringDartBuilder extends Builder {
+class ServerBuilder extends Builder {
+  late final Map<String, List<String>> _buildExtensions;
+
+  ServerBuilder() {
+    final package = p.basename(Directory.current.path);
+
+    _buildExtensions = {
+      r'$package$': [p.join('bin', '$package.dart')],
+    };
+  }
+
   @override
-  Map<String, List<String>> get buildExtensions => {
-    r'$package$': [p.join('lib', 'spring_dart.dart')],
-  };
+  Map<String, List<String>> get buildExtensions => _buildExtensions;
 
   @override
   FutureOr<void> build(BuildStep buildStep) async {
@@ -65,7 +74,6 @@ class SpringDartBuilder extends Builder {
 
           final constructorParams = switch (constructors.isNotEmpty) {
             true => constructors.first.formalParameters.map((p) {
-              // imports.add(p.type.element?.library?.uri.toString() ?? '-');
               final found = p.type.getDisplayString().toCamelCase();
               return p.isNamed ? '${p.name}: $found' : found;
             }).toList(),
@@ -98,16 +106,13 @@ class SpringDartBuilder extends Builder {
 
               if (returnType.isDartAsyncFuture || returnType.isDartAsyncFutureOr) {
                 final realReturnType = (returnType as ParameterizedType).typeArguments.first;
-                // imports.add(realReturnType.element?.library?.uri.toString() ?? '');
                 beans.add(
                   'final ${realReturnType.getDisplayString().toCamelCase()} = await ${className?.toCamelCase()}.$methodName()',
                 );
               } else {
                 final methodReturnType = returnType.getDisplayString();
 
-                beans.add(
-                  'final ${methodReturnType.toCamelCase()} = ${className?.toCamelCase()}.$methodName()',
-                );
+                beans.add('final ${methodReturnType.toCamelCase()} = ${className?.toCamelCase()}.$methodName()');
               }
             }
           }
@@ -119,44 +124,44 @@ class SpringDartBuilder extends Builder {
 
     buffer.writeln('// GENERATED CODE - DO NOT MODIFY BY HAND\n\n');
 
-    buffer.writeln('import \'package:spring_dart/spring_dart.dart\';');
+    imports.add('package:spring_dart/spring_dart.dart');
 
-    buffer.writeln('import \'dart:convert\';');
+    imports.add('dart:convert');
 
-    buffer.writeAll(imports.map((i) => 'import \'$i\';'), '\n');
+    final sortedImports = imports.toList()..sort();
+
+    buffer.writeAll(sortedImports.map((i) => 'import \'$i\';'), '\n');
 
     if (springDartConfiguration.length > 1) {
       throw Exception('Only one SpringDartConfiguration is allowed!');
     }
 
-    buffer.writeln('''class SpringDart {
-  const SpringDart._();
-
-  static Future<void> start() async {
-    final router = Router();${configurations.isNotEmpty ? '''\n// Configurations
-    ${configurations.map((e) => '$e;').join('\n')}''' : ''}${beans.isNotEmpty ? '''\n// Beans
-    ${beans.map((e) => '$e;').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
-    ${repositories.map((e) => '$e;').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
-    ${services.map((e) => '$e;').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers
-    ${controllers.map((e) => '$e;').join('\n')}''' : ''}
-    // Server Configuration
-    Handler handler = router.call;${filters.isNotEmpty ? '''\n// Filters (Middlewares)
-    ${filters.map((e) => 'final ${e.name} = ${e.className}();').join('\n')}
-    handler = Pipeline()${filters.map((e) {
-            return '''.addMiddleware(${e.name}.toShelfMiddleware)''';
-          }).join('\n')}.addHandler(handler);''' : ''}${springDartConfiguration.isEmpty ? '''await Next(;handler).call();''' : springDartConfiguration.map((e) => '''final ${e.name} = ${e.className}();
-    await ${e.name}.setup(Next(handler));''').join('\n')}
-  }   
+    buffer.writeln('''void main(List<String> args) async {
+  final router = Router();${configurations.isNotEmpty ? '''\n// Configurations
+  ${configurations.map((e) => '$e;').join('\n')}''' : ''}${beans.isNotEmpty ? '''\n// Beans
+  ${beans.map((e) => '$e;').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
+  ${repositories.map((e) => '$e;').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
+  ${services.map((e) => '$e;').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers
+  ${controllers.map((e) => '$e;').join('\n')}''' : ''}
+  // Server Configuration
+  Handler handler = router.call;${filters.isNotEmpty ? '''handler = Pipeline()${filters.map((e) {
+            return '''.addMiddleware(${e.className}().toShelfMiddleware)''';
+          }).join('\n')}.addHandler(handler);''' : ''}${springDartConfiguration.isEmpty ? '''final \$defaultServerConfiguration = SpringDartConfiguration.defaultConfiguration;
+return await \$defaultServerConfiguration.setup(SpringDart(handler));''' : springDartConfiguration.map((e) {
+            return '''final ${e.name} = ${e.className}();
+            for (final middleware in ${e.name}.middlewares) {
+              handler = middleware(handler);
+            }
+            return await ${e.name}.setup(SpringDart(handler));''';
+          }).join('\n')}
 }''');
 
     buffer.writeln(content.join('\n\n'));
 
-    final outputId = AssetId(buildStep.inputId.package, p.join('lib', 'spring_dart.dart'));
+    final outputId = AssetId(buildStep.inputId.package, p.join('bin', '${buildStep.inputId.package}.dart'));
 
     final formatted = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion).format(buffer.toString());
 
     await buildStep.writeAsString(outputId, formatted);
   }
 }
-
-// TODO: Escrever diretamente no arquivo server.dart

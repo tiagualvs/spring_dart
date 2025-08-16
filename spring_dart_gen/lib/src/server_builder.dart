@@ -12,6 +12,8 @@ import 'checkers.dart';
 import 'controller_helper.dart';
 import 'extensions/string_ext.dart';
 
+typedef ClassContent = ({String name, String className, String content});
+
 class ServerBuilder extends Builder {
   late final Map<String, List<String>> _buildExtensions;
 
@@ -32,41 +34,81 @@ class ServerBuilder extends Builder {
 
     final imports = <String>{};
 
-    final beans = <String>{};
+    final configurations = <ClassContent>{};
 
-    final configurations = <String>{};
+    final beans = <ClassContent>{};
 
-    final services = <String>{};
+    final services = <ClassContent>{};
 
-    final filters = <({String name, String className})>{};
+    final components = <ClassContent>{};
 
-    final controllers = <String>{};
+    final filters = <ClassContent>{};
 
-    final repositories = <String>{};
+    final repositories = <ClassContent>{};
 
-    final springDartConfiguration = <({String name, String className})>{};
+    final controllers = <ClassContent>{};
+
+    final springDartConfiguration = <ClassContent>{};
 
     final content = await buildStep.findAssets(Glob('lib/**.dart')).asyncExpand((assetId) async* {
       final library = await buildStep.resolver.libraryFor(assetId);
       final reader = LibraryReader(library);
 
       for (final element in reader.classes) {
-        if (controllerChecker.hasAnnotationOf(element)) {
-          yield controllerHelper(element, imports, controllers);
-        } else if (componentChecker.hasAnnotationOf(element)) {
+        if (configurationChecker.hasAnnotationOf(element)) {
           final className = element.name;
 
           imports.add(element.library.uri.toString());
 
           final superType = element.supertype;
 
-          if (superType != null && filterChecker.isExactly(superType.element)) {
-            filters.add((name: className?.toCamelCase() ?? '', className: className ?? ''));
+          if (superType != null && springDartConfigurationChecker.isExactly(superType.element)) {
+            springDartConfiguration.add(
+              (
+                name: className?.toCamelCase() ?? '',
+                className: className ?? '',
+                content: 'final ${className?.toCamelCase()} = $className()',
+              ),
+            );
+          } else {
+            configurations.add(
+              (
+                name: className?.toCamelCase() ?? '',
+                className: className ?? '',
+                content: 'final ${className?.toCamelCase()} = $className()',
+              ),
+            );
+
+            for (final method in element.methods.where((m) => beanChecker.hasAnnotationOf(m))) {
+              final methodName = method.name;
+              final type = method.type;
+              final returnType = type.returnType;
+
+              if (returnType.isDartAsyncFuture || returnType.isDartAsyncFutureOr) {
+                final realReturnType = (returnType as ParameterizedType).typeArguments.first;
+                beans.add(
+                  (
+                    name: realReturnType.getDisplayString().toCamelCase(),
+                    className: className ?? '',
+                    content:
+                        'final ${realReturnType.getDisplayString().toCamelCase()} = await ${className?.toCamelCase()}.$methodName()',
+                  ),
+                );
+              } else {
+                final methodReturnType = returnType.getDisplayString();
+
+                beans.add(
+                  (
+                    name: methodReturnType.toCamelCase(),
+                    className: className ?? '',
+                    content: 'final ${methodReturnType.toCamelCase()} = ${className?.toCamelCase()}.$methodName()',
+                  ),
+                );
+              }
+            }
           }
-        } else if (repositoryChecker.hasAnnotationOf(element)) {
+        } else if (componentChecker.hasAnnotationOf(element)) {
           final className = element.name;
-          final superClassName = element.interfaces.firstOrNull?.getDisplayString();
-          final name = superClassName ?? className;
 
           imports.add(element.library.uri.toString());
 
@@ -80,42 +122,71 @@ class ServerBuilder extends Builder {
             false => <String>[],
           };
 
-          repositories.add('final ${name?.toCamelCase()} = $className(${constructorParams.join(', ')})');
+          final superType = element.supertype;
+
+          if (superType != null && filterChecker.isExactly(superType.element)) {
+            filters.add(
+              (
+                name: '${className?.toCamelCase()}',
+                className: className ?? '',
+                content: '.addMiddleware($className(${constructorParams.join(', ')}).toShelfMiddleware)',
+              ),
+            );
+          } else {
+            components.add(
+              (
+                name: '${className?.toCamelCase()}',
+                className: className ?? '',
+                content: 'final ${className?.toCamelCase()} = $className(${constructorParams.join(', ')})',
+              ),
+            );
+          }
+        } else if (repositoryChecker.hasAnnotationOf(element)) {
+          final className = element.name;
+
+          imports.add(element.library.uri.toString());
+
+          final constructors = element.constructors;
+
+          final constructorParams = switch (constructors.isNotEmpty) {
+            true => constructors.first.formalParameters.map((p) {
+              final found = p.type.getDisplayString().toCamelCase();
+              return p.isNamed ? '${p.name}: $found' : found;
+            }).toList(),
+            false => <String>[],
+          };
+
+          repositories.add(
+            (
+              name: className?.toCamelCase() ?? '',
+              className: className ?? '',
+              content: 'final ${className?.toCamelCase()} = $className(${constructorParams.join(', ')})',
+            ),
+          );
         } else if (serviceChecker.hasAnnotationOf(element)) {
           final className = element.name;
 
           imports.add(element.library.uri.toString());
 
-          services.add('final ${className?.toCamelCase()} = $className()');
-        } else if (configurationChecker.hasAnnotationOf(element)) {
-          final className = element.name;
+          final constructors = element.constructors;
 
-          imports.add(element.library.uri.toString());
+          final constructorParams = switch (constructors.isNotEmpty) {
+            true => constructors.first.formalParameters.map((p) {
+              final found = p.type.getDisplayString().toCamelCase();
+              return p.isNamed ? '${p.name}: $found' : found;
+            }).toList(),
+            false => <String>[],
+          };
 
-          final superType = element.supertype;
-
-          if (superType != null && springDartConfigurationChecker.isExactly(superType.element)) {
-            springDartConfiguration.add((name: className?.toCamelCase() ?? '', className: className ?? ''));
-          } else {
-            configurations.add('final ${className?.toCamelCase()} = $className()');
-
-            for (final method in element.methods.where((m) => beanChecker.hasAnnotationOf(m))) {
-              final methodName = method.name;
-              final type = method.type;
-              final returnType = type.returnType;
-
-              if (returnType.isDartAsyncFuture || returnType.isDartAsyncFutureOr) {
-                final realReturnType = (returnType as ParameterizedType).typeArguments.first;
-                beans.add(
-                  'final ${realReturnType.getDisplayString().toCamelCase()} = await ${className?.toCamelCase()}.$methodName()',
-                );
-              } else {
-                final methodReturnType = returnType.getDisplayString();
-
-                beans.add('final ${methodReturnType.toCamelCase()} = ${className?.toCamelCase()}.$methodName()');
-              }
-            }
-          }
+          services.add(
+            (
+              name: className?.toCamelCase() ?? '',
+              className: className ?? '',
+              content: 'final ${className?.toCamelCase()} = $className(${constructorParams.join(', ')})',
+            ),
+          );
+        } else if (controllerChecker.hasAnnotationOf(element)) {
+          yield controllerHelper(element, imports, controllers);
         }
       }
     }).toList();
@@ -138,20 +209,24 @@ class ServerBuilder extends Builder {
 
     buffer.writeln('''void main(List<String> args) async {
   final router = Router();${configurations.isNotEmpty ? '''\n// Configurations
-  ${configurations.map((e) => '$e;').join('\n')}''' : ''}${beans.isNotEmpty ? '''\n// Beans
-  ${beans.map((e) => '$e;').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
-  ${repositories.map((e) => '$e;').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
-  ${services.map((e) => '$e;').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers
-  ${controllers.map((e) => '$e;').join('\n')}''' : ''}
+  ${configurations.map((e) => '${e.content};').join('\n')}''' : ''}${beans.isNotEmpty ? '''\n// Beans
+  ${beans.map((e) => '${e.content};').join('\n')}''' : ''}${components.isNotEmpty ? '''\n // Components
+  ${components.map((e) => '${e.content};').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
+  ${repositories.map((e) => '${e.content};').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
+  ${services.map((e) => '${e.content};').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers
+  ${controllers.map((e) => '${e.content};').join('\n')}''' : ''}
   // Server Configuration
-  Handler handler = router.call;${filters.isNotEmpty ? '''handler = Pipeline()${filters.map((e) {
-            return '''.addMiddleware(${e.className}().toShelfMiddleware)''';
-          }).join('\n')}.addHandler(handler);''' : ''}${springDartConfiguration.isEmpty ? '''final \$defaultServerConfiguration = SpringDartConfiguration.defaultConfiguration;
+  Handler handler = router.call;${filters.isNotEmpty ? '''handler = Pipeline()${filters.map((e) => e.content).join('\n')}.addHandler(handler);''' : ''}${springDartConfiguration.isEmpty ? '''final \$defaultServerConfiguration = SpringDartConfiguration.defaultConfiguration;
+for (final middleware in \$defaultServerConfiguration.middlewares) {
+  handler = middleware(handler);
+}
+SpringDartDefaults.instance.toEncodable = \$defaultServerConfiguration.toEncodable;
 return await \$defaultServerConfiguration.setup(SpringDart(handler));''' : springDartConfiguration.map((e) {
-            return '''final ${e.name} = ${e.className}();
+            return '''${e.content};
             for (final middleware in ${e.name}.middlewares) {
               handler = middleware(handler);
             }
+            SpringDartDefaults.instance.toEncodable = ${e.name}.toEncodable;
             return await ${e.name}.setup(SpringDart(handler));''';
           }).join('\n')}
 }''');

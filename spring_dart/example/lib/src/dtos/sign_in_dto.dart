@@ -5,5 +5,5 @@ class SignInDto {
   final String email;
   final String password;
 
-  const SignInDto(this.email, this.password);
+  const SignInDto({required this.email, required this.password});
 }

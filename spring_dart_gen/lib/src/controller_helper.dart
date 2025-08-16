@@ -7,7 +7,7 @@ import 'package:spring_dart_gen/src/extensions/string_ext.dart';
 String controllerHelper(
   ClassElement element,
   Set<String> imports,
-  Set<String> controllers,
+  Set<({String name, String className, String content})> controllers,
 ) {
   final constructors = element.constructors;
   final controllerPath = controllerChecker.firstAnnotationOf(element)?.getField('path')?.toStringValue() ?? '';
@@ -19,7 +19,6 @@ String controllerHelper(
 
   final constructorParams = switch (constructors.isNotEmpty) {
     true => constructors.first.formalParameters.map((p) {
-      // imports.add(p.type.element?.library?.uri.toString() ?? '-');
       final found = p.type.getDisplayString().toCamelCase();
       return p.isNamed ? '${p.name}: $found' : found;
     }).toList(),
@@ -27,10 +26,20 @@ String controllerHelper(
   };
 
   controllers.add(
-    'final ${controllerClassName?.toCamelCase()} = _\$$controllerClassName(${constructorParams.join(', ')})',
+    (
+      name: '${controllerClassName?.toCamelCase()}',
+      className: controllerClassName ?? '',
+      content: 'final ${controllerClassName?.toCamelCase()} = _\$$controllerClassName(${constructorParams.join(', ')})',
+    ),
   );
 
-  controllers.add('router.mount(\'$controllerPath\', ${controllerClassName?.toCamelCase()}.handler)');
+  controllers.add(
+    (
+      name: '${controllerClassName?.toCamelCase()}',
+      className: controllerClassName ?? '',
+      content: 'router.mount(\'$controllerPath\', ${controllerClassName?.toCamelCase()}.handler)',
+    ),
+  );
 
   return '''class _\$$controllerClassName extends $controllerClassName {
       ${constructors.isNotEmpty ? '''${constructors.first.isConst ? 'const ' : ''}_\$$controllerClassName(${constructors.first.formalParameters.map((p) {
@@ -47,19 +56,19 @@ String controllerHelper(
     // Query params
     final queryParameters = method.formalParameters.where((e) => queryChecker.hasAnnotationOf(e)).map((q) => (query: q, name: queryChecker.firstAnnotationOf(q)?.getField('name')?.toStringValue() ?? '')).toList();
     if (!queryParameters.every((q) => stringChecker.isExactlyType(q.query.type))) {
-      throw StateError('Query parameters must be a nullable `String` only!');
+      throw Exception('Query parameters must be a nullable `String` only!');
     }
     if (queryParameters.any((q) => q.query.type.nullabilitySuffix == NullabilitySuffix.none)) {
-      throw StateError('Query parameters must be a nullable `String` only!');
+      throw Exception('Query parameters must be a nullable `String` only!');
     }
 
     // Path param
     final params = method.formalParameters.where((p) => paramChecker.hasAnnotationOf(p)).map((p) => (param: p, name: paramChecker.firstAnnotationOf(p)?.getField('name')?.toStringValue() ?? '')).toList();
     if (!params.every((p) => stringChecker.isExactlyType(p.param.type))) {
-      throw StateError('Path parameters must be `@String` only!');
+      throw Exception('Path parameters must be `@String` only!');
     }
     if (params.any((p) => p.param.type.nullabilitySuffix != NullabilitySuffix.none)) {
-      throw StateError('Path parameters must be `String` only!');
+      throw Exception('Path parameters must be `String` only!');
     }
     final paramsString = switch (params.isEmpty) {
       true => '',
@@ -72,7 +81,7 @@ String controllerHelper(
     // Header param
     final headers = method.formalParameters.where((h) => headerChecker.hasAnnotationOf(h));
     if (headers.any((h) => h.type.nullabilitySuffix == NullabilitySuffix.none)) {
-      throw StateError('Header parameters must be a nullable `String` only!');
+      throw Exception('Header parameters must be a nullable `String` only!');
     }
 
     // Dtos
@@ -94,7 +103,7 @@ String controllerHelper(
             },
           );
     if (!everyDtoHasAnnotation) {
-      throw StateError('Only classes with @Dto annotation or @Map<String, dynamic> are allowed as body arguments.');
+      throw Exception('Only classes with @Dto annotation or @Map<String, dynamic> are allowed as body arguments.');
     }
 
     final routeParams = method.formalParameters.map((e) {

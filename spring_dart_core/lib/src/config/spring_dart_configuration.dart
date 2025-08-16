@@ -1,7 +1,6 @@
 import 'dart:io';
 
-import 'package:shelf/shelf.dart';
-import 'package:shelf/shelf_io.dart';
+import '../../spring_dart_core.dart';
 
 class SpringDart {
   final Handler handler;
@@ -14,11 +13,16 @@ class SpringDart {
 }
 
 abstract class SpringDartConfiguration {
+  /// Setups and starts [SpringDart]
   Future<void> setup(SpringDart spring) {
     return spring.start();
   }
 
+  /// Defines the global [Middleware] for [SpringDart]
   List<Middleware> get middlewares => [logRequests()];
+
+  /// Defines the default [ToEncodable] function for [SpringDart]
+  ToEncodable? get toEncodable => SpringDartDefaults.instance.toEncodable;
 
   static SpringDartConfiguration get defaultConfiguration => _DefaultSpringDartConfiguration();
 }

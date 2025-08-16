@@ -28,8 +28,10 @@
       "name": "example",
       "version": "1.0.0",
       "dependencies": [
-        "postgres",
-        "spring_dart"
+        "bcrypt",
+        "dart_jsonwebtoken",
+        "spring_dart",
+        "sqlite3"
       ],
       "devDependencies": [
         "build_runner",
@@ -255,20 +257,31 @@
       ]
     },
     {
-      "name": "postgres",
-      "version": "3.5.6",
+      "name": "sqlite3",
+      "version": "2.9.0",
       "dependencies": [
-        "async",
-        "buffer",
-        "charcode",
         "collection",
-        "crypto",
+        "ffi",
         "meta",
-        "pool",
-        "sasl_scram",
-        "stack_trace",
-        "stream_channel"
+        "path",
+        "typed_data",
+        "web"
       ]
+    },
+    {
+      "name": "dart_jsonwebtoken",
+      "version": "3.2.0",
+      "dependencies": [
+        "clock",
+        "convert",
+        "ed25519_edwards",
+        "pointycastle"
+      ]
+    },
+    {
+      "name": "bcrypt",
+      "version": "1.1.3",
+      "dependencies": []
     },
     {
       "name": "yaml",
@@ -708,24 +721,37 @@
       ]
     },
     {
-      "name": "charcode",
-      "version": "1.4.0",
+      "name": "web",
+      "version": "1.1.1",
       "dependencies": []
     },
     {
-      "name": "sasl_scram",
-      "version": "0.1.1",
+      "name": "ffi",
+      "version": "2.1.4",
+      "dependencies": []
+    },
+    {
+      "name": "clock",
+      "version": "1.1.2",
+      "dependencies": []
+    },
+    {
+      "name": "ed25519_edwards",
+      "version": "0.3.1",
       "dependencies": [
-        "buffer",
+        "adaptive_number",
         "collection",
-        "crypto",
-        "saslprep"
+        "convert",
+        "crypto"
       ]
     },
     {
-      "name": "buffer",
-      "version": "1.2.3",
-      "dependencies": []
+      "name": "pointycastle",
+      "version": "4.0.0",
+      "dependencies": [
+        "collection",
+        "convert"
+      ]
     },
     {
       "name": "web_socket",
@@ -733,11 +759,6 @@
       "dependencies": [
         "web"
       ]
-    },
-    {
-      "name": "web",
-      "version": "1.1.1",
-      "dependencies": []
     },
     {
       "name": "vm_service",
@@ -824,10 +845,10 @@
       ]
     },
     {
-      "name": "saslprep",
-      "version": "1.0.3",
+      "name": "adaptive_number",
+      "version": "1.0.0",
       "dependencies": [
-        "unorm_dart"
+        "fixnum"
       ]
     },
     {
@@ -838,16 +859,6 @@
         "meta",
         "path"
       ]
-    },
-    {
-      "name": "unorm_dart",
-      "version": "0.3.1+1",
-      "dependencies": []
-    },
-    {
-      "name": "ffi",
-      "version": "2.1.4",
-      "dependencies": []
     }
   ],
   "configVersion": 1

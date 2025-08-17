@@ -134,3 +134,56 @@ class WithFilter {
   final Type filter;
   const WithFilter(this.filter);
 }
+
+/// `@ControllerAdvice`
+class ControllerAdvice {
+  const ControllerAdvice();
+}
+
+/// `@ExceptionHandler`
+class ExceptionHandler {
+  final Type exception;
+  const ExceptionHandler(this.exception);
+}
+
+/// `@Entity`
+class Entity {
+  const Entity();
+}
+
+/// `@Table`
+class Table {
+  final String name;
+  const Table(this.name);
+}
+
+/// `@Column`
+class Column {
+  final String name;
+  const Column(this.name);
+}
+
+/// `@Id`
+class Id {
+  const Id();
+}
+
+/// `@GeneratedValue`
+class GeneratedValue {
+  const GeneratedValue();
+}
+
+/// `@Default`
+class Default {
+  const Default();
+}
+
+/// `@Unique`
+class Unique {
+  const Unique();
+}
+
+/// `@Nullable`
+class Nullable {
+  const Nullable();
+}

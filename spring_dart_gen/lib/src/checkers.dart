@@ -1,5 +1,10 @@
+import 'dart:async';
+
 import 'package:source_gen/source_gen.dart';
 import 'package:spring_dart_core/spring_dart_core.dart';
+
+final controllerAdviceChecker = TypeChecker.typeNamed(ControllerAdvice, inPackage: 'spring_dart_core');
+final exceptionHandlerChecker = TypeChecker.typeNamed(ExceptionHandler, inPackage: 'spring_dart_core');
 
 final controllerChecker = TypeChecker.typeNamed(Controller, inPackage: 'spring_dart_core');
 final repositoryChecker = TypeChecker.typeNamed(Repository, inPackage: 'spring_dart_core');
@@ -30,10 +35,22 @@ final withParserChecker = TypeChecker.typeNamed(WithParser, inPackage: 'spring_d
 
 final requestChecker = TypeChecker.typeNamed(Request, inPackage: 'shelf');
 final responseChecker = TypeChecker.typeNamed(Response, inPackage: 'shelf');
+final futureResponseChecker = TypeChecker.typeNamed(Future<Response>);
+final futureOrResponseChecker = TypeChecker.typeNamed(FutureOr<Response>);
 
 final filterChecker = TypeChecker.typeNamed(Filter, inPackage: 'spring_dart_core');
 
 final springDartConfigurationChecker = TypeChecker.typeNamed(SpringDartConfiguration, inPackage: 'spring_dart_core');
 
+final entityChecker = TypeChecker.typeNamed(Entity, inPackage: 'spring_dart_core');
+final tableChecker = TypeChecker.typeNamed(Table, inPackage: 'spring_dart_core');
+final columnChecker = TypeChecker.typeNamed(Column, inPackage: 'spring_dart_core');
+final idChecker = TypeChecker.typeNamed(Id, inPackage: 'spring_dart_core');
+final generatedValueChecker = TypeChecker.typeNamed(GeneratedValue, inPackage: 'spring_dart_core');
+final defaultChecker = TypeChecker.typeNamed(Default, inPackage: 'spring_dart_core');
+final uniqueChecker = TypeChecker.typeNamed(Unique, inPackage: 'spring_dart_core');
+final nullableChecker = TypeChecker.typeNamed(Nullable, inPackage: 'spring_dart_core');
+
 final stringChecker = TypeChecker.typeNamed(String);
 final jsonChecker = TypeChecker.typeNamed(Map<String, dynamic>);
+final exceptionChecker = TypeChecker.typeNamed(Exception);

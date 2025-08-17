@@ -12,4 +12,13 @@ extension StringExt on String {
   String toSnakeCase() {
     return s.Strings.toSnakeCase(this);
   }
+
+  String removeSuffixes(List<String> suffixes) {
+    for (final suffix in suffixes) {
+      if (endsWith(suffix)) {
+        return substring(0, length - suffix.length);
+      }
+    }
+    return this;
+  }
 }

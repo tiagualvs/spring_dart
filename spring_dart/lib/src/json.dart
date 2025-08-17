@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:shelf/shelf.dart' show Response;
+import 'package:spring_dart_core/spring_dart_core.dart' show Response;
 
-import 'common/spring_dart_defaults.dart';
+import 'spring_dart_defaults.dart';
 
 /// [Json] class for [Response] objects with JSON body
 class Json extends Response {

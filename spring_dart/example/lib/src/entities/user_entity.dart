@@ -1,11 +1,20 @@
 import 'dart:convert';
 
+import 'package:spring_dart/spring_dart.dart';
+
+@Entity()
+@Table('users')
 class UserEntity {
+  @Id()
+  @GeneratedValue()
   final int id;
   final String name;
+  @Unique()
   final String email;
   final String password;
+  @Default()
   final DateTime createdAt;
+  @Default()
   final DateTime updatedAt;
 
   const UserEntity({

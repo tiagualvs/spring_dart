@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-typedef ToEncodable = Object? Function(Object? obj);
+import 'package:spring_dart/spring_dart.dart' show ToEncodable;
 
 class SpringDartDefaults {
   static final SpringDartDefaults _instance = SpringDartDefaults._();

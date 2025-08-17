@@ -2,6 +2,8 @@ import 'dart:io';
 
 import '../../spring_dart_core.dart';
 
+typedef ToEncodable = Object? Function(Object? obj);
+
 class SpringDart {
   final Handler handler;
 
@@ -22,7 +24,7 @@ abstract class SpringDartConfiguration {
   List<Middleware> get middlewares => [logRequests()];
 
   /// Defines the default [ToEncodable] function for [SpringDart]
-  ToEncodable? get toEncodable => SpringDartDefaults.instance.toEncodable;
+  ToEncodable? get toEncodable => null;
 
   static SpringDartConfiguration get defaultConfiguration => _DefaultSpringDartConfiguration();
 }

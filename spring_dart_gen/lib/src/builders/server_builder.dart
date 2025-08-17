@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
@@ -8,9 +9,10 @@ import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:source_gen/source_gen.dart';
 
-import 'checkers.dart';
-import 'controller_helper.dart';
-import 'extensions/string_ext.dart';
+import '../checkers.dart';
+import '../extensions/string_ext.dart';
+import '../helpers/controller_helper.dart';
+import '../helpers/entity_helper.dart';
 
 typedef ClassContent = ({String name, String className, String content});
 
@@ -21,7 +23,7 @@ class ServerBuilder extends Builder {
     final package = p.basename(Directory.current.path);
 
     _buildExtensions = {
-      r'$package$': [p.join('bin', '$package.dart')],
+      r'$package$': [p.join('bin', '$package.dart'), p.join('lib', 'spring_dart.dart')],
     };
   }
 
@@ -49,6 +51,10 @@ class ServerBuilder extends Builder {
     final controllers = <ClassContent>{};
 
     final springDartConfiguration = <ClassContent>{};
+
+    final entities = <ClassContent>{};
+
+    final exceptionHandler = <({String name, String className, String content, List<MethodElement> methods})>{};
 
     final content = await buildStep.findAssets(Glob('lib/**.dart')).asyncExpand((assetId) async* {
       final library = await buildStep.resolver.libraryFor(assetId);
@@ -187,6 +193,55 @@ class ServerBuilder extends Builder {
           );
         } else if (controllerChecker.hasAnnotationOf(element)) {
           yield controllerHelper(element, imports, controllers);
+        } else if (entityChecker.hasAnnotationOf(element)) {
+          yield entityHelper(element, imports, entities);
+        } else if (controllerAdviceChecker.hasAnnotationOf(element)) {
+          final className = element.name;
+          final methods = element.methods
+              .where((m) => exceptionHandlerChecker.hasAnnotationOf(m))
+              .map(
+                (m) => (
+                  method: m,
+                  type: exceptionHandlerChecker.firstAnnotationOf(m)!.getField('exception')!.toTypeValue()!,
+                ),
+              )
+              .where(
+                (m) {
+                  final typeElement = m.type.element as ClassElement?;
+                  final superType = typeElement?.supertype;
+
+                  if (superType != null) {
+                    return exceptionChecker.isExactlyType(m.type) ||
+                        exceptionChecker.isExactlyType(superType) ||
+                        (typeElement?.interfaces.any((i) => exceptionChecker.isExactlyType(i)) ?? false);
+                  }
+
+                  return exceptionChecker.isExactlyType(m.type);
+                },
+              )
+              .where(
+                (m) =>
+                    futureResponseChecker.isExactlyType(m.method.returnType) ||
+                    futureOrResponseChecker.isExactlyType(m.method.returnType) ||
+                    responseChecker.isExactlyType(m.method.returnType),
+              );
+
+          if (methods.isEmpty) continue;
+
+          imports.add(element.library.uri.toString());
+
+          for (final method in methods) {
+            imports.add(method.type.element?.library?.uri.toString() ?? '');
+          }
+
+          exceptionHandler.add(
+            (
+              className: className ?? '',
+              name: className?.toCamelCase() ?? '',
+              content: 'final ${className?.toCamelCase()} = $className()',
+              methods: methods.map((m) => m.method).toList(),
+            ),
+          );
         }
       }
     }).toList();
@@ -214,19 +269,50 @@ class ServerBuilder extends Builder {
   ${components.map((e) => '${e.content};').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
   ${repositories.map((e) => '${e.content};').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
   ${services.map((e) => '${e.content};').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers
-  ${controllers.map((e) => '${e.content};').join('\n')}''' : ''}
+  ${controllers.map((e) => '${e.content};').join('\n')}''' : ''}${exceptionHandler.isNotEmpty ? '''\n // Exception Handlers
+  ${exceptionHandler.map((e) => '${e.content};').join('\n')}''' : ''}
   // Server Configuration
   Handler handler = router.call;${filters.isNotEmpty ? '''handler = Pipeline()${filters.map((e) => e.content).join('\n')}.addHandler(handler);''' : ''}${springDartConfiguration.isEmpty ? '''final \$defaultServerConfiguration = SpringDartConfiguration.defaultConfiguration;
 for (final middleware in \$defaultServerConfiguration.middlewares) {
   handler = middleware(handler);
 }
-SpringDartDefaults.instance.toEncodable = \$defaultServerConfiguration.toEncodable;
+SpringDartDefaults.instance.toEncodable = \$defaultServerConfiguration.toEncodable;${exceptionHandler.isNotEmpty ? '''handler = (Request request) async {
+  try {
+    return await handler(request);
+  } on Exception catch (e) {
+    ${exceptionHandler.map((e) => '''if (e is ${e.className}) {
+      return ${e.name}.handler(e);
+    }''').join('\n')}
+    return Json(
+      500,
+      body: {
+        'error': e.toString(),
+      },
+    );
+  }
+};''' : ''}
 return await \$defaultServerConfiguration.setup(SpringDart(handler));''' : springDartConfiguration.map((e) {
             return '''${e.content};
             for (final middleware in ${e.name}.middlewares) {
               handler = middleware(handler);
             }
-            SpringDartDefaults.instance.toEncodable = ${e.name}.toEncodable;
+            SpringDartDefaults.instance.toEncodable = ${e.name}.toEncodable;${exceptionHandler.isNotEmpty ? '''handler = (Request request) async {
+  try {
+    return await handler(request);
+  }  catch (e) {
+    ${exceptionHandler.map((e) => e.methods.map((m) => '''if (e is ${exceptionHandlerChecker.firstAnnotationOf(m)?.getField('exception')?.toTypeValue()}) {
+      return ${e.name}.${m.name}(e);
+    }''').join('else \n')).join('\n')}
+    else {
+      return Json(
+      500,
+      body: {
+        'error': e.toString(),
+      },
+    );
+    }
+  }
+};''' : ''}
             return await ${e.name}.setup(SpringDart(handler));''';
           }).join('\n')}
 }''');

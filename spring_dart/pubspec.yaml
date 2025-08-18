@@ -2,16 +2,13 @@ name: spring_dart
 description: A starting point for Dart libraries or applications.
 version: 0.0.1
 
-publish_to: none
+resolution: workspace
 
 environment:
   sdk: ^3.9.0
 
 dependencies:
   spring_dart_core:
-    git:
-      url: https://github.com/tiagualvs/spring_dart.git
-      path: spring_dart_core
 
 dev_dependencies:
   lints: ^5.0.0

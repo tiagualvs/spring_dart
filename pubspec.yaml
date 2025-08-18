@@ -1,0 +1,10 @@
+name: _
+
+environment:
+  sdk: ^3.9.0
+
+workspace:
+  - spring_dart
+  - spring_dart_core
+  - spring_dart_gen
+  - spring_dart/example

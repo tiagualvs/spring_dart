@@ -2,6 +2,8 @@ name: spring_dart_core
 description: A starting point for Dart libraries or applications.
 version: 0.0.1
 
+resolution: workspace
+
 environment:
   sdk: ^3.9.0
 

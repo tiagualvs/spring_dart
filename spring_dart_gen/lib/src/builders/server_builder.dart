@@ -8,6 +8,7 @@ import 'package:dart_style/dart_style.dart';
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:source_gen/source_gen.dart';
+import 'package:yaml/yaml.dart';
 
 import '../checkers.dart';
 import '../extensions/string_ext.dart';
@@ -20,10 +21,12 @@ class ServerBuilder extends Builder {
   late final Map<String, List<String>> _buildExtensions;
 
   ServerBuilder() {
-    final package = p.basename(Directory.current.path);
+    final file = File(p.join(Directory.current.path, 'pubspec.yaml'));
+    final yaml = loadYaml(file.readAsStringSync());
+    final package = yaml['name'] as String? ?? 'server';
 
     _buildExtensions = {
-      r'$package$': [p.join('bin', '$package.dart'), p.join('lib', 'spring_dart.dart')],
+      r'$package$': [p.join('bin', '$package.dart')],
     };
   }
 
@@ -263,45 +266,62 @@ class ServerBuilder extends Builder {
     }
 
     buffer.writeln('''void main(List<String> args) async {
-  final router = Router();${configurations.isNotEmpty ? '''\n// Configurations
+  final router = Router(notFoundHandler: _defaultNotFoundHandler);${configurations.isNotEmpty ? '''\n// Configurations
   ${configurations.map((e) => '${e.content};').join('\n')}''' : ''}${beans.isNotEmpty ? '''\n// Beans
   ${beans.map((e) => '${e.content};').join('\n')}''' : ''}${components.isNotEmpty ? '''\n // Components
   ${components.map((e) => '${e.content};').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
   ${repositories.map((e) => '${e.content};').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
   ${services.map((e) => '${e.content};').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers
-  ${controllers.map((e) => '${e.content};').join('\n')}''' : ''}${exceptionHandler.isNotEmpty ? '''\n // Exception Handlers
-  ${exceptionHandler.map((e) => '${e.content};').join('\n')}''' : ''}
+  ${controllers.map((e) => '${e.content};').join('\n')}''' : ''}
   // Server Configuration
   Handler handler = router.call;${filters.isNotEmpty ? '''handler = Pipeline()${filters.map((e) => e.content).join('\n')}.addHandler(handler);''' : ''}${springDartConfiguration.isEmpty ? '''final \$defaultServerConfiguration = SpringDartConfiguration.defaultConfiguration;
 for (final middleware in \$defaultServerConfiguration.middlewares) {
   handler = middleware(handler);
 }
-SpringDartDefaults.instance.toEncodable = \$defaultServerConfiguration.toEncodable;${exceptionHandler.isNotEmpty ? '''handler = (Request request) async {
-  try {
-    return await handler(request);
-  } on Exception catch (e) {
-    ${exceptionHandler.map((e) => '''if (e is ${e.className}) {
-      return ${e.name}.handler(e);
-    }''').join('\n')}
-    return Json(
-      500,
-      body: {
-        'error': e.toString(),
-      },
-    );
-  }
-};''' : ''}
-return await \$defaultServerConfiguration.setup(SpringDart(handler));''' : springDartConfiguration.map((e) {
+SpringDartDefaults.instance.toEncodable = \$defaultServerConfiguration.toEncodable;
+return await \$defaultServerConfiguration.setup(SpringDart((request) => _exceptionHandler(handler, request)));''' : springDartConfiguration.map((e) {
             return '''${e.content};
             for (final middleware in ${e.name}.middlewares) {
               handler = middleware(handler);
             }
-            SpringDartDefaults.instance.toEncodable = ${e.name}.toEncodable;${exceptionHandler.isNotEmpty ? '''handler = (Request request) async {
+            SpringDartDefaults.instance.toEncodable = ${e.name}.toEncodable;
+            return await ${e.name}.setup(SpringDart((request) => _exceptionHandler(handler, request)));''';
+          }).join('\n')}
+}''');
+
+    buffer.writeln(content.join('\n\n'));
+
+    buffer.writeln(defaultNotFoundHandler());
+
+    buffer.writeln(exceptionHandlerHelper(exceptionHandler));
+
+    final outputId = AssetId(buildStep.inputId.package, p.join('bin', '${buildStep.inputId.package}.dart'));
+
+    final formatted = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion).format(buffer.toString());
+
+    await buildStep.writeAsString(outputId, formatted);
+  }
+
+  String defaultNotFoundHandler() {
+    return '''FutureOr<Response> _defaultNotFoundHandler(Request request) async {
+      return Json(
+        404,
+        body: {
+          'error': 'Route not found!',
+        },
+      );
+    }''';
+  }
+
+  String exceptionHandlerHelper(
+    Set<({String name, String className, String content, List<MethodElement> methods})> exceptionHandler,
+  ) {
+    return '''FutureOr<Response> _exceptionHandler(Handler handler, Request request) async {
   try {
     return await handler(request);
   }  catch (e) {
     ${exceptionHandler.map((e) => e.methods.map((m) => '''if (e is ${exceptionHandlerChecker.firstAnnotationOf(m)?.getField('exception')?.toTypeValue()}) {
-      return ${e.name}.${m.name}(e);
+      return ${e.className}().${m.name}(e);
     }''').join('else \n')).join('\n')}
     else {
       return Json(
@@ -312,17 +332,6 @@ return await \$defaultServerConfiguration.setup(SpringDart(handler));''' : sprin
     );
     }
   }
-};''' : ''}
-            return await ${e.name}.setup(SpringDart(handler));''';
-          }).join('\n')}
-}''');
-
-    buffer.writeln(content.join('\n\n'));
-
-    final outputId = AssetId(buildStep.inputId.package, p.join('bin', '${buildStep.inputId.package}.dart'));
-
-    final formatted = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion).format(buffer.toString());
-
-    await buildStep.writeAsString(outputId, formatted);
+}''';
   }
 }

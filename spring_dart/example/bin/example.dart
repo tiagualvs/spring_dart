@@ -18,7 +18,7 @@ import 'package:example/src/services/auth_service.dart';
 import 'package:spring_dart/spring_dart.dart';
 
 void main(List<String> args) async {
-  final router = Router();
+  final router = Router(notFoundHandler: _defaultNotFoundHandler);
   // Configurations
   final securityConfiguration = SecurityConfiguration();
   final sqliteConfiguration = SqliteConfiguration();
@@ -33,8 +33,6 @@ void main(List<String> args) async {
   // Controllers
   final authController = _$AuthController(authService);
   router.mount('/auth', authController.handler);
-  // Exception Handlers
-  final serverControllerAdvice = ServerControllerAdvice();
   // Server Configuration
   Handler handler = router.call;
   final serverConfiguration = ServerConfiguration();
@@ -42,20 +40,9 @@ void main(List<String> args) async {
     handler = middleware(handler);
   }
   SpringDartDefaults.instance.toEncodable = serverConfiguration.toEncodable;
-  handler = (Request request) async {
-    try {
-      return await handler(request);
-    } catch (e) {
-      if (e is Exception) {
-        return serverControllerAdvice.exceptionHandler(e);
-      } else if (e is ServerException) {
-        return serverControllerAdvice.serverExceptionHandler(e);
-      } else {
-        return Json(500, body: {'error': e.toString()});
-      }
-    }
-  };
-  return await serverConfiguration.setup(SpringDart(handler));
+  return await serverConfiguration.setup(
+    SpringDart((request) => _exceptionHandler(handler, request)),
+  );
 }
 
 class _$AuthController extends AuthController {
@@ -138,4 +125,24 @@ class UsersInsertOneParams extends InsertOneParams<UserEntity> {
     required this.email,
     required this.password,
   });
+}
+
+FutureOr<Response> _defaultNotFoundHandler(Request request) async {
+  final path = request.url.path;
+
+  return Json(404, body: {'error': 'Route not found: $path'});
+}
+
+FutureOr<Response> _exceptionHandler(Handler handler, Request request) async {
+  try {
+    return await handler(request);
+  } catch (e) {
+    if (e is Exception) {
+      return ServerControllerAdvice().exceptionHandler(e);
+    } else if (e is ServerException) {
+      return ServerControllerAdvice().serverExceptionHandler(e);
+    } else {
+      return Json(500, body: {'error': e.toString()});
+    }
+  }
 }

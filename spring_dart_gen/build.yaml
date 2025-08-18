@@ -2,6 +2,6 @@ builders:
   server_builder:
     import: "package:spring_dart_gen/spring_dart_gen.dart"
     builder_factories: ["serverBuilder"]
-    build_extensions: {"$package$": ["bin/$package$.dart", "lib/spring_dart.dart"]}
+    build_extensions: {"$package$": ["bin/$package$.dart"]}
     auto_apply: root_package
     build_to: source

@@ -29,7 +29,9 @@ String controllerHelper(
     (
       name: '${controllerClassName?.toCamelCase()}',
       className: controllerClassName ?? '',
-      content: 'final ${controllerClassName?.toCamelCase()} = _\$$controllerClassName(${constructorParams.join(', ')})',
+      content:
+          'final ${controllerClassName?.toCamelCase()} = _\$$controllerClassName(${constructorParams.map((e) => 'getIt()').join(', ')})',
+      // content: 'final ${controllerClassName?.toCamelCase()} = _\$$controllerClassName(${constructorParams.join(', ')})',
     ),
   );
 

@@ -8,6 +8,7 @@ import 'package:dart_style/dart_style.dart';
 import 'package:glob/glob.dart';
 import 'package:path/path.dart' as p;
 import 'package:source_gen/source_gen.dart';
+import 'package:spring_dart_sql/spring_dart_sql.dart';
 import 'package:yaml/yaml.dart';
 
 import '../checkers.dart';
@@ -18,15 +19,17 @@ import '../helpers/entity_helper.dart';
 typedef ClassContent = ({String name, String className, String content});
 
 class ServerBuilder extends Builder {
+  late final Driver driver;
   late final Map<String, List<String>> _buildExtensions;
 
-  ServerBuilder() {
+  ServerBuilder(BuilderOptions options) {
+    driver = Driver.fromConfig(options.config);
     final file = File(p.join(Directory.current.path, 'pubspec.yaml'));
     final yaml = loadYaml(file.readAsStringSync());
     final package = yaml['name'] as String? ?? 'server';
 
     _buildExtensions = {
-      r'$package$': [p.join('bin', '$package.dart')],
+      r'$package$': [p.join('bin', '$package.dart'), p.join('lib', 'server.dart')],
     };
   }
 
@@ -49,7 +52,7 @@ class ServerBuilder extends Builder {
 
     final filters = <ClassContent>{};
 
-    final repositories = <ClassContent>{};
+    final repositories = <String>{};
 
     final controllers = <ClassContent>{};
 
@@ -95,12 +98,13 @@ class ServerBuilder extends Builder {
 
               if (returnType.isDartAsyncFuture || returnType.isDartAsyncFutureOr) {
                 final realReturnType = (returnType as ParameterizedType).typeArguments.first;
+
                 beans.add(
                   (
                     name: realReturnType.getDisplayString().toCamelCase(),
                     className: className ?? '',
                     content:
-                        'final ${realReturnType.getDisplayString().toCamelCase()} = await ${className?.toCamelCase()}.$methodName()',
+                        'getIt.registerLazySingletonAsync<${realReturnType.getDisplayString()}>(() => ${className?.toCamelCase()}.$methodName())',
                   ),
                 );
               } else {
@@ -110,7 +114,9 @@ class ServerBuilder extends Builder {
                   (
                     name: methodReturnType.toCamelCase(),
                     className: className ?? '',
-                    content: 'final ${methodReturnType.toCamelCase()} = ${className?.toCamelCase()}.$methodName()',
+                    content:
+                        'getIt.registerLazySingleton<$methodReturnType>(() => ${className?.toCamelCase()}.$methodName())',
+                    // content: 'final ${methodReturnType.toCamelCase()} = ${className?.toCamelCase()}.$methodName()',
                   ),
                 );
               }
@@ -166,11 +172,7 @@ class ServerBuilder extends Builder {
           };
 
           repositories.add(
-            (
-              name: className?.toCamelCase() ?? '',
-              className: className ?? '',
-              content: 'final ${className?.toCamelCase()} = $className(${constructorParams.join(', ')})',
-            ),
+            'getIt.registerLazySingleton<$className>(() => $className(${constructorParams.join(', ')}))',
           );
         } else if (serviceChecker.hasAnnotationOf(element)) {
           final className = element.name;
@@ -191,13 +193,15 @@ class ServerBuilder extends Builder {
             (
               name: className?.toCamelCase() ?? '',
               className: className ?? '',
-              content: 'final ${className?.toCamelCase()} = $className(${constructorParams.join(', ')})',
+              content:
+                  'getIt.registerLazySingleton<$className>(() => $className(${constructorParams.map((e) => 'getIt()').join(', ')}))',
+              // content: 'final ${className?.toCamelCase()} = $className(${constructorParams.join(', ')})',
             ),
           );
         } else if (controllerChecker.hasAnnotationOf(element)) {
           yield controllerHelper(element, imports, controllers);
         } else if (entityChecker.hasAnnotationOf(element)) {
-          yield entityHelper(element, imports, entities);
+          yield entityHelper(driver, element, imports, repositories, entities);
         } else if (controllerAdviceChecker.hasAnnotationOf(element)) {
           final className = element.name;
           final methods = element.methods
@@ -265,12 +269,13 @@ class ServerBuilder extends Builder {
       throw Exception('Only one SpringDartConfiguration is allowed!');
     }
 
-    buffer.writeln('''void main(List<String> args) async {
+    buffer.writeln('''Future<void> server(List<String> args) async {
+  final getIt = GetIt.instance;
   final router = Router(notFoundHandler: _defaultNotFoundHandler);${configurations.isNotEmpty ? '''\n// Configurations
   ${configurations.map((e) => '${e.content};').join('\n')}''' : ''}${beans.isNotEmpty ? '''\n// Beans
-  ${beans.map((e) => '${e.content};').join('\n')}''' : ''}${components.isNotEmpty ? '''\n // Components
+  ${beans.map((e) => '${e.content};').join('\n')}''' : ''}${beans.isNotEmpty ? 'await GetIt.instance.allReady();' : ''}${components.isNotEmpty ? '''\n // Components
   ${components.map((e) => '${e.content};').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
-  ${repositories.map((e) => '${e.content};').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
+  ${repositories.map((e) => '$e;').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
   ${services.map((e) => '${e.content};').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers
   ${controllers.map((e) => '${e.content};').join('\n')}''' : ''}
   // Server Configuration
@@ -295,11 +300,20 @@ return await \$defaultServerConfiguration.setup(SpringDart((request) => _excepti
 
     buffer.writeln(exceptionHandlerHelper(exceptionHandler));
 
-    final outputId = AssetId(buildStep.inputId.package, p.join('bin', '${buildStep.inputId.package}.dart'));
+    final entryPointAssetId = AssetId(buildStep.inputId.package, p.join('bin', '${buildStep.inputId.package}.dart'));
 
-    final formatted = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion).format(buffer.toString());
+    final serverAssetId = AssetId(buildStep.inputId.package, p.join('lib', 'server.dart'));
 
-    await buildStep.writeAsString(outputId, formatted);
+    final formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
+
+    await buildStep.writeAsString(serverAssetId, formatter.format(buffer.toString()));
+
+    await buildStep.writeAsString(
+      entryPointAssetId,
+      formatter.format('''import 'package:${buildStep.inputId.package}/server.dart';
+
+void main(List<String> args) async => server(args);'''),
+    );
   }
 
   String defaultNotFoundHandler() {

@@ -5,6 +5,7 @@ environment:
 
 workspace:
   - spring_dart
+  - spring_dart/example
   - spring_dart_core
   - spring_dart_gen
-  - spring_dart/example
+  - spring_dart_sql

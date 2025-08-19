@@ -1,3 +1,4 @@
+import 'package:example/server.dart';
 import 'package:example/src/entities/credentials_entity.dart';
 import 'package:spring_dart/spring_dart.dart';
 
@@ -13,20 +14,33 @@ class AuthController {
 
   @Post('/sign-up')
   Future<Response> signUp(@Body() SignUpDto dto) async {
-    final user = await authService.signUp(dto);
-    return Json.created(body: user);
+    final result = await authService.signUp(dto);
+    return result.fold(
+      (user) {
+        return Json.created(body: user);
+      },
+      (error) {
+        return error.toResponse();
+      },
+    );
   }
 
   @Post('/sign-in')
   Future<Response> signIn(@Body() SignInDto dto) async {
-    final user = await authService.signIn(dto);
-    if (user == null) return Json.unauthorized();
-    final credentials = CredentialsEntity(
-      accessToken: authService.jwtService.sign(user.id.toString(), expiresIn: Duration(hours: 1)),
-      refreshToken: authService.jwtService.sign(user.id.toString(), expiresIn: Duration(days: 7)),
-      expiresIn: 3600,
+    final result = await authService.signIn(dto);
+    return result.fold(
+      (user) {
+        final credentials = CredentialsEntity(
+          accessToken: authService.jwtService.sign(user.id.toString(), expiresIn: Duration(hours: 1)),
+          refreshToken: authService.jwtService.sign(user.id.toString(), expiresIn: Duration(days: 7)),
+          expiresIn: 3600,
+        );
+        return Json.ok(body: {'user': user, 'credentials': credentials});
+      },
+      (error) {
+        return error.toResponse();
+      },
     );
-    return Json.ok(body: {'user': user, 'credentials': credentials});
   }
 
   @Post('/sign-out')
@@ -38,7 +52,9 @@ class AuthController {
   Future<Response> refreshToken(@Body() Map<String, dynamic> body) async {
     if (!body.containsKey('refresh_token')) return Json.badRequest();
     final payload = authService.jwtService.verify(body['refresh_token']);
-    final user = await authService.usersRepository.findOne(int.parse(payload['sub'] as String));
+    final id = payload['sub'] as int?;
+    if (id == null) return Json.unauthorized();
+    final user = await authService.usersRepository.findOne(UsersFindOneParams(id));
     if (user == null) return Json.unauthorized();
     final credentials = CredentialsEntity(
       accessToken: authService.jwtService.sign(user.id.toString(), expiresIn: Duration(hours: 1)),

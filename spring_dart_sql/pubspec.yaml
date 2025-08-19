@@ -1,16 +1,12 @@
-name: spring_dart
+name: spring_dart_sql
 description: A starting point for Dart libraries or applications.
-version: 0.0.1
+version: 1.0.0
 
 resolution: workspace
 
 environment:
   sdk: ^3.9.0
 
-dependencies:
-  spring_dart_core:
-  get_it: ^8.2.0
-
 dev_dependencies:
   lints: ^6.0.0
-  test: ^1.24.0
+  test: ^1.25.6

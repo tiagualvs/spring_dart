@@ -1,8 +1,11 @@
+import 'package:example/server.dart';
 import 'package:example/src/config/security_configuration.dart';
+import 'package:example/src/core/result.dart';
 import 'package:example/src/dtos/sign_in_dto.dart';
 import 'package:example/src/entities/user_entity.dart';
-import 'package:example/src/repositories/users_repository.dart';
+import 'package:example/src/exceptions.dart';
 import 'package:spring_dart/spring_dart.dart';
+import 'package:spring_dart_sql/spring_dart_sql.dart';
 
 import '../dtos/sign_up_dto.dart';
 
@@ -14,14 +17,32 @@ class AuthService {
 
   const AuthService(this.usersRepository, this.jwtService, this.passwordService);
 
-  Future<UserEntity> signUp(SignUpDto dto) async {
-    return await usersRepository.insertOne(dto.name, dto.email, passwordService.hash(dto.password));
+  AsyncResult<UserEntity> signUp(SignUpDto dto) async {
+    try {
+      final user = await usersRepository.insertOne(
+        UsersInsertOneParams(name: dto.name, email: dto.email, password: passwordService.hash(dto.password)),
+      );
+      return Value(user);
+    } on Exception catch (e) {
+      return Error(InternalServerException(e.toString()));
+    }
   }
 
-  Future<UserEntity?> signIn(SignInDto dto) async {
-    final user = await usersRepository.findOneByEmail(dto.email);
-    if (user == null) return null;
-    if (!passwordService.verify(dto.password, user.password)) return null;
-    return user;
+  AsyncResult<UserEntity> signIn(SignInDto dto) async {
+    try {
+      final users = await usersRepository.findMany(UsersFindManyParams(Where('email', Eq(), dto.email)));
+
+      if (users.isEmpty) return Error(NotFoundException('User not found!'));
+
+      final user = users.first;
+
+      if (!passwordService.verify(dto.password, user.password)) {
+        return Error(UnauthorizedException('User not found!'));
+      }
+
+      return Value(user);
+    } on Exception catch (e) {
+      return Error(InternalServerException(e.toString()));
+    }
   }
 }

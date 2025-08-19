@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:spring_dart/spring_dart.dart';
+import 'package:spring_dart_sql/spring_dart_sql.dart';
 
 @Entity()
 @Table('users')
@@ -13,8 +13,10 @@ class UserEntity {
   final String email;
   final String password;
   @Default()
+  @Column('created_at', TIMESTAMP())
   final DateTime createdAt;
   @Default()
+  @Column('updated_at', TIMESTAMP())
   final DateTime updatedAt;
 
   const UserEntity({

@@ -17,6 +17,14 @@ class Where {
     Or o => o.conditions.expand((w) => w.values).toList(),
     Where w => [w.value],
   };
+
+  bool get isEmpty => switch (this) {
+    And a => a.conditions.isEmpty,
+    Or o => o.conditions.isEmpty,
+    Where _ => false,
+  };
+
+  bool get isNotEmpty => !isEmpty;
 }
 
 class And extends Where {

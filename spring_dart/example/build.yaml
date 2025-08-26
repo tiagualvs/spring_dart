@@ -1,8 +1,0 @@
-targets:
-  $default:
-    builders:
-      spring_dart_gen:server_builder:
-        options:
-          spring_dart_sql:
-            driver: sqlite
-            database: database.db

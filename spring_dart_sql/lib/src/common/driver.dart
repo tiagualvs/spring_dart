@@ -1,40 +1,79 @@
+enum DDL {
+  /// Always create the schema (dropping them first if they already exist).
+  create,
+
+  /// Create the schema and drop when done.
+  createDrop,
+
+  /// Update the schema if necessary.
+  update,
+
+  /// Validate the schema.
+  validate,
+
+  /// No DDL.
+  none;
+
+  const DDL();
+
+  static DDL fromString(String? value) {
+    return switch (value) {
+      'create' => DDL.create,
+      'create-drop' => DDL.createDrop,
+      'update' => DDL.update,
+      'validate' => DDL.validate,
+      _ => DDL.none,
+    };
+  }
+}
+
 sealed class Driver {
-  const Driver();
+  final DDL ddl;
+  final String import;
+  final String className;
+  final String varName;
+  const Driver({
+    this.ddl = DDL.none,
+    required this.import,
+    required this.className,
+    required this.varName,
+  });
 
   factory Driver.fromConfig(Map<String, dynamic> config) {
-    if (!config.containsKey('spring_dart_sql')) return NoneDriver();
-    final data = Map<String, dynamic>.from(config['spring_dart_sql']);
-    return switch (data['driver']) {
-      'sqlite' when data['database'] == 'memory' => SqliteMemoryDriver(),
-      'sqlite' when (data['database'] as String?)?.endsWith('.db') ?? false => SqliteFileDriver(data['database']),
-      'postgres' => PostgresDriver(
-        port: data['port'],
-        host: data['host'],
-        database: data['database'],
-        username: data['username'],
-        password: data['password'],
-        useSsl: data['use_ssl'],
-      ),
-      _ => NoneDriver(),
+    final databaseURL = config['database_url'] as String? ?? '';
+    final ddl = DDL.fromString(config['ddl-auto'] as String?);
+    if (databaseURL.isEmpty) return NoneDriver(ddl: ddl);
+    final uri = Uri.parse(databaseURL);
+    return switch (uri.scheme) {
+      'sqlite' when uri.host == 'memory' => SqliteMemoryDriver(ddl: ddl),
+      'sqlite' when uri.host.endsWith('.db') => SqliteFileDriver(path: uri.host, ddl: ddl),
+      _ => NoneDriver(ddl: ddl),
     };
   }
 
-  bool get isSqlite => this is SqliteFileDriver || this is SqliteMemoryDriver;
-  bool get isPostgres => this is PostgresDriver;
-  bool get isNone => this is NoneDriver;
+  /// Driver is Sqlite
+  bool get sqlite => this is SqliteFileDriver || this is SqliteMemoryDriver;
+
+  /// Driver is Postgres
+  bool get postgres => this is PostgresDriver;
+
+  /// Driver is None
+  bool get none => this is NoneDriver;
 }
 
 final class NoneDriver extends Driver {
-  const NoneDriver();
+  const NoneDriver({super.ddl}) : super(import: '', className: '', varName: '');
 }
 
 final class SqliteFileDriver extends Driver {
   final String path;
-  const SqliteFileDriver(this.path);
+  const SqliteFileDriver({required this.path, super.ddl})
+    : super(import: 'package:sqlite3/sqlite3.dart', className: 'Database', varName: 'db');
 }
 
 final class SqliteMemoryDriver extends Driver {
-  const SqliteMemoryDriver();
+  const SqliteMemoryDriver({super.ddl})
+    : super(import: 'package:sqlite3/sqlite3.dart', className: 'Database', varName: 'db');
 }
 
 final class PostgresDriver extends Driver {
@@ -51,5 +90,6 @@ final class PostgresDriver extends Driver {
     this.username,
     this.password,
     this.useSsl = false,
-  });
+    super.ddl,
+  }) : super(import: 'package:postgres/postgres.dart', className: 'Connection', varName: 'conn');
 }

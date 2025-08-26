@@ -1,4 +1,5 @@
 import 'package:example/server.dart';
+import 'package:example/src/config/beans/password_bean.dart';
 import 'package:example/src/config/security_configuration.dart';
 import 'package:example/src/core/result.dart';
 import 'package:example/src/dtos/sign_in_dto.dart';
@@ -13,14 +14,19 @@ import '../dtos/sign_up_dto.dart';
 class AuthService {
   final UsersRepository usersRepository;
   final JwtService jwtService;
-  final PasswordService passwordService;
+  final PasswordBean passwordService;
 
   const AuthService(this.usersRepository, this.jwtService, this.passwordService);
 
   AsyncResult<UserEntity> signUp(SignUpDto dto) async {
     try {
       final user = await usersRepository.insertOne(
-        UsersInsertOneParams(name: dto.name, email: dto.email, password: passwordService.hash(dto.password)),
+        InsertOneUserParams(
+          name: dto.name,
+          username: '',
+          email: dto.email,
+          password: passwordService.hash(dto.password),
+        ),
       );
       return Value(user);
     } on Exception catch (e) {
@@ -30,7 +36,7 @@ class AuthService {
 
   AsyncResult<UserEntity> signIn(SignInDto dto) async {
     try {
-      final users = await usersRepository.findMany(UsersFindManyParams(Where('email', Eq(), dto.email)));
+      final users = await usersRepository.findMany(FindManyUsersParams(Where('email', Eq(), dto.email)));
 
       if (users.isEmpty) return Error(NotFoundException('User not found!'));
 

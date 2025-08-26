@@ -52,10 +52,9 @@ class AuthController {
   Future<Response> refreshToken(@Body() Map<String, dynamic> body) async {
     if (!body.containsKey('refresh_token')) return Json.badRequest();
     final payload = authService.jwtService.verify(body['refresh_token']);
-    final id = payload['sub'] as int?;
+    final id = int.tryParse(payload['sub'] ?? '');
     if (id == null) return Json.unauthorized();
-    final user = await authService.usersRepository.findOne(UsersFindOneParams(id));
-    if (user == null) return Json.unauthorized();
+    final user = await authService.usersRepository.findOne(FindOneUserParams(id));
     final credentials = CredentialsEntity(
       accessToken: authService.jwtService.sign(user.id.toString(), expiresIn: Duration(hours: 1)),
       refreshToken: authService.jwtService.sign(user.id.toString(), expiresIn: Duration(days: 7)),

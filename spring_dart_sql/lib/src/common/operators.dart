@@ -7,6 +7,10 @@ final class Eq extends Operator {
   const Eq() : super('=');
 }
 
+final class Neq extends Operator {
+  const Neq() : super('!=');
+}
+
 final class Gt extends Operator {
   const Gt() : super('>');
 }

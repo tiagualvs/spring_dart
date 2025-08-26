@@ -45,13 +45,19 @@ final springDartConfigurationChecker = TypeChecker.typeNamed(SpringDartConfigura
 
 final entityChecker = TypeChecker.typeNamed(Entity, inPackage: 'spring_dart_sql');
 final tableChecker = TypeChecker.typeNamed(Table, inPackage: 'spring_dart_sql');
+final constraintChecker = TypeChecker.typeNamed(Constraint, inPackage: 'spring_dart_sql');
+final foreignKeyConstraintChecker = TypeChecker.typeNamed(ForeignKeyConstraint, inPackage: 'spring_dart_sql');
+final primaryKeyConstraintChecker = TypeChecker.typeNamed(PrimaryKeyConstraint, inPackage: 'spring_dart_sql');
+final uniqueConstraintChecker = TypeChecker.typeNamed(UniqueConstraint, inPackage: 'spring_dart_sql');
 final columnChecker = TypeChecker.typeNamed(Column, inPackage: 'spring_dart_sql');
-final idChecker = TypeChecker.typeNamed(Id, inPackage: 'spring_dart_sql');
+final primaryKeyChecker = TypeChecker.typeNamed(PrimaryKey, inPackage: 'spring_dart_sql');
 final generatedValueChecker = TypeChecker.typeNamed(GeneratedValue, inPackage: 'spring_dart_sql');
 final uniqueChecker = TypeChecker.typeNamed(Unique, inPackage: 'spring_dart_sql');
 final nullableChecker = TypeChecker.typeNamed(Nullable, inPackage: 'spring_dart_sql');
+final checkChecker = TypeChecker.typeNamed(Check, inPackage: 'spring_dart_sql');
 final defaultChecker = TypeChecker.typeNamed(Default, inPackage: 'spring_dart_sql');
 final dataTypeChecker = TypeChecker.typeNamed(DataType, inPackage: 'spring_dart_sql');
+final referencesChecker = TypeChecker.typeNamed(References, inPackage: 'spring_dart_sql');
 final timestampChecker = TypeChecker.typeNamed(TIMESTAMP, inPackage: 'spring_dart_sql');
 
 final stringChecker = TypeChecker.typeNamed(String);

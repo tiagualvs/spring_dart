@@ -3,47 +3,53 @@ import 'dart:convert';
 import 'package:spring_dart_sql/spring_dart_sql.dart';
 
 @Entity()
-@Table('posts')
-@ForeignKeyConstraint(['user_id'], 'users', ['id'])
-@PrimaryKeyConstraint(['id'])
-class PostEntity {
+@Table('comments')
+class CommentEntity {
+  @PrimaryKey()
   @GeneratedValue()
   final int id;
 
   @Check.isNotEmpty()
-  @Column('title')
-  final String title;
+  final String content;
 
-  @Check.isNotEmpty()
-  @Column('body')
-  final String body;
-
+  @References('users', 'id')
   @Column('user_id', INTEGER())
   final int userId;
 
+  @References('posts', 'id')
+  @Column('post_id', INTEGER())
+  final int postId;
+
   @Default(CURRENT_TIMESTAMP)
-  @Column('created_at', TIMESTAMP())
+  @Column('created_at', DATETIME())
   final DateTime createdAt;
 
   @Default(CURRENT_TIMESTAMP)
-  @Column('updated_at', TIMESTAMP())
+  @Column('updated_at', DATETIME())
   final DateTime updatedAt;
 
-  const PostEntity({
+  const CommentEntity({
     required this.id,
-    required this.title,
-    required this.body,
+    required this.content,
     required this.userId,
+    required this.postId,
     required this.createdAt,
     required this.updatedAt,
   });
 
-  PostEntity copyWith({int? id, String? title, String? body, int? userId, DateTime? createdAt, DateTime? updatedAt}) {
-    return PostEntity(
+  CommentEntity copyWith({
+    int? id,
+    String? content,
+    int? userId,
+    int? postId,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return CommentEntity(
       id: id ?? this.id,
-      title: title ?? this.title,
-      body: body ?? this.body,
+      content: content ?? this.content,
       userId: userId ?? this.userId,
+      postId: postId ?? this.postId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -52,20 +58,20 @@ class PostEntity {
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'id': id,
-      'title': title,
-      'body': body,
+      'content': content,
       'user_id': userId,
+      'post_id': postId,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
     };
   }
 
-  factory PostEntity.fromMap(Map<String, dynamic> map) {
-    return PostEntity(
+  factory CommentEntity.fromMap(Map<String, dynamic> map) {
+    return CommentEntity(
       id: map['id'] as int,
-      title: map['title'] as String,
-      body: map['body'] as String,
+      content: map['content'] as String,
       userId: map['user_id'] as int,
+      postId: map['post_id'] as int,
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int),
     );
@@ -73,27 +79,27 @@ class PostEntity {
 
   String toJson() => json.encode(toMap());
 
-  factory PostEntity.fromJson(String source) => PostEntity.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory CommentEntity.fromJson(String source) => CommentEntity.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
   String toString() {
-    return 'PostEntity(id: $id, title: $title, body: $body, userId: $userId, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'CommentEntity(id: $id, content: $content, userId: $userId, postId: $postId, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
-  bool operator ==(covariant PostEntity other) {
+  bool operator ==(covariant CommentEntity other) {
     if (identical(this, other)) return true;
 
     return other.id == id &&
-        other.title == title &&
-        other.body == body &&
+        other.content == content &&
         other.userId == userId &&
+        other.postId == postId &&
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt;
   }
 
   @override
   int get hashCode {
-    return id.hashCode ^ title.hashCode ^ body.hashCode ^ userId.hashCode ^ createdAt.hashCode ^ updatedAt.hashCode;
+    return id.hashCode ^ content.hashCode ^ userId.hashCode ^ postId.hashCode ^ createdAt.hashCode ^ updatedAt.hashCode;
   }
 }

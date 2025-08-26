@@ -313,6 +313,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
+  inflection3:
+    dependency: transitive
+    description:
+      name: inflection3
+      sha256: cb54689bcfe3c0168a6979ee3191df584dcef4f870c5ef41c798bcb35ff5aca3
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.3+2"
   io:
     dependency: transitive
     description:
@@ -569,6 +577,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.1"
+  tempoid:
+    dependency: transitive
+    description:
+      name: tempoid
+      sha256: "4e27ec1435a9249c5765744410b94e2750cd6fec6810e41a97030322af68f14f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0"
   term_glyph:
     dependency: transitive
     description:

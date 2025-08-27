@@ -24,7 +24,7 @@ class RepositoryHelper {
     };
 
     repositories.add(
-      'getIt.registerLazySingleton<$className>(() => $className(${constructorParams.join(', ')}))',
+      'injector.set<$className>(() => $className(${constructorParams.join(', ')}))',
     );
 
     return '';

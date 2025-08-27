@@ -5,8 +5,8 @@ import 'package:spring_dart_sql/spring_dart_sql.dart';
 @Entity()
 @Table('posts')
 @ForeignKeyConstraint(['user_id'], 'users', ['id'])
-@PrimaryKeyConstraint(['id'])
 class PostEntity {
+  @PrimaryKey()
   @GeneratedValue()
   final int id;
 

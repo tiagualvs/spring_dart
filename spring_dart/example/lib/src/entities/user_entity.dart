@@ -5,8 +5,8 @@ import 'package:spring_dart_sql/spring_dart_sql.dart';
 @Entity()
 @Table('users')
 @UniqueConstraint(['email', 'username'])
-@PrimaryKeyConstraint(['id'])
 class UserEntity {
+  @PrimaryKey()
   @GeneratedValue()
   final int id;
 

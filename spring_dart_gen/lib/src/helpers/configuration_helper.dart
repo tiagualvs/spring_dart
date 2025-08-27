@@ -59,7 +59,7 @@ class ConfigurationHelper {
               name: realReturnType.getDisplayString().toCamelCase(),
               className: className ?? '',
               content:
-                  'getIt.registerLazySingletonAsync<${realReturnType.getDisplayString()}>(() => ${className?.toCamelCase()}.$methodName())',
+                  'injector.setAsync<${realReturnType.getDisplayString()}>(() => ${className?.toCamelCase()}.$methodName())',
             ),
           );
         } else {
@@ -71,8 +71,7 @@ class ConfigurationHelper {
             (
               name: methodReturnType.toCamelCase(),
               className: className ?? '',
-              content:
-                  'getIt.registerLazySingleton<$methodReturnType>(() => ${className?.toCamelCase()}.$methodName())',
+              content: 'injector.set<$methodReturnType>(() => ${className?.toCamelCase()}.$methodName())',
             ),
           );
         }

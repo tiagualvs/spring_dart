@@ -76,7 +76,7 @@ class EntityHelper {
 
     repositories.addAll(driverCreate);
 
-    repositories.add('getIt.registerLazySingleton<$repositoryName>(() => $repositoryName(db))');
+    repositories.add('injector.set<$repositoryName>(() => $repositoryName(db))');
 
     final requiredFields = fields
         .where((f) => generatedValueChecker.hasAnnotationOf(f) == false)

@@ -23,18 +23,14 @@ import 'package:spring_dart_sql/spring_dart_sql.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 Future<void> server(List<String> args) async {
-  final getIt = GetIt.instance;
+  final injector = Injector.instance;
   final router = Router(notFoundHandler: _defaultNotFoundHandler);
   // Configurations
   final securityConfiguration = SecurityConfiguration();
   // Beans
-  getIt.registerLazySingleton<JwtService>(
-    () => securityConfiguration.jwtService(),
-  );
-  getIt.registerLazySingleton<PasswordBean>(
-    () => securityConfiguration.passwordService(),
-  );
-  await GetIt.instance.allReady();
+  injector.set<JwtService>(() => securityConfiguration.jwtService());
+  injector.set<PasswordBean>(() => securityConfiguration.passwordService());
+  await injector.commit();
   // Repositories
   final db = sqlite3.open('database.db');
   db.execute(
@@ -48,19 +44,17 @@ Future<void> server(List<String> args) async {
   db.execute('INSERT INTO _migrations (version) VALUES (?);', [
     migration.version,
   ]);
-  getIt.registerLazySingleton<ChatsRepository>(() => ChatsRepository(db));
-  getIt.registerLazySingleton<CommentsRepository>(() => CommentsRepository(db));
-  getIt.registerLazySingleton<ParticipantsRepository>(
-    () => ParticipantsRepository(db),
-  );
-  getIt.registerLazySingleton<PostsRepository>(() => PostsRepository(db));
-  getIt.registerLazySingleton<UsersRepository>(() => UsersRepository(db));
+  injector.set<ChatsRepository>(() => ChatsRepository(db));
+  injector.set<CommentsRepository>(() => CommentsRepository(db));
+  injector.set<ParticipantsRepository>(() => ParticipantsRepository(db));
+  injector.set<PostsRepository>(() => PostsRepository(db));
+  injector.set<UsersRepository>(() => UsersRepository(db));
   // Services
-  getIt.registerLazySingleton<AuthService>(
-    () => AuthService(getIt(), getIt(), getIt()),
+  injector.set<AuthService>(
+    () => AuthService(injector.get(), injector.get(), injector.get()),
   );
   // Controllers
-  final authController = _$AuthController(getIt());
+  final authController = _$AuthController(injector.get());
   router.mount('/auth', authController.handler);
   // Server Configuration
   Handler handler = router.call;
@@ -1523,7 +1517,7 @@ class DefaultMigration extends Migration {
 );
 
 CREATE TABLE IF NOT EXISTS users (
-  id INTEGER NOT NULL AUTOINCREMENT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   name VARCHAR(255) NOT NULL,
   username VARCHAR(24) NOT NULL,
   email TEXT NOT NULL UNIQUE,
@@ -1531,8 +1525,7 @@ CREATE TABLE IF NOT EXISTS users (
   image TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT uq_users_email_username UNIQUE (email, username),
-  CONSTRAINT pk_users_id PRIMARY KEY (id)
+  CONSTRAINT uq_users_email_username UNIQUE (email, username)
 );
 
 CREATE TABLE IF NOT EXISTS comments (
@@ -1552,14 +1545,13 @@ CREATE TABLE IF NOT EXISTS participants (
 );
 
 CREATE TABLE IF NOT EXISTS posts (
-  id INTEGER NOT NULL AUTOINCREMENT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL CHECK (title != ''),
   body TEXT NOT NULL CHECK (body != ''),
   user_id INTEGER NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_posts_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT pk_posts_id PRIMARY KEY (id)
+  CONSTRAINT fk_posts_user_id FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
 );''';
   }
 

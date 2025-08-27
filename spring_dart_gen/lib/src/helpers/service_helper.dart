@@ -28,7 +28,7 @@ class ServiceHelper {
         name: className?.toCamelCase() ?? '',
         className: className ?? '',
         content:
-            'getIt.registerLazySingleton<$className>(() => $className(${constructorParams.map((e) => 'getIt()').join(', ')}))',
+            'injector.set<$className>(() => $className(${constructorParams.map((e) => 'injector.get()').join(', ')}))',
       ),
     );
 

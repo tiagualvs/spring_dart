@@ -42,10 +42,10 @@ class SpringDartHelper {
 ${importsSorted.map((i) => 'import \'$i\';').join('\n')}
 
 Future<void> server(List<String> args) async {
-  final getIt = GetIt.instance;
+  final injector = Injector.instance;
   final router = Router(notFoundHandler: _defaultNotFoundHandler);${configurations.isNotEmpty ? '''\n// Configurations
   ${configurations.map((e) => '${e.content};').join('\n')}''' : ''}${beans.isNotEmpty ? '''\n// Beans
-  ${beans.map((e) => '${e.content};').join('\n')}''' : ''}${beans.isNotEmpty ? 'await GetIt.instance.allReady();' : ''}${components.isNotEmpty ? '''\n // Components
+  ${beans.map((e) => '${e.content};').join('\n')}''' : ''}${beans.isNotEmpty ? 'await injector.commit();' : ''}${components.isNotEmpty ? '''\n // Components
   ${components.map((e) => '${e.content};').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
   ${repositories.map((e) => '$e;').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
   ${services.map((e) => '${e.content};').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers

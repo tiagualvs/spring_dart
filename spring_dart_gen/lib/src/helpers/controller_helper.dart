@@ -33,7 +33,7 @@ class ControllerHelper {
         name: '${controllerClassName?.toCamelCase()}',
         className: controllerClassName ?? '',
         content:
-            'final ${controllerClassName?.toCamelCase()} = _\$$controllerClassName(${constructorParams.map((e) => 'getIt()').join(', ')})',
+            'final ${controllerClassName?.toCamelCase()} = _\$$controllerClassName(${constructorParams.map((e) => 'injector.get()').join(', ')})',
         // content: 'final ${controllerClassName?.toCamelCase()} = _\$$controllerClassName(${constructorParams.join(', ')})',
       ),
     );

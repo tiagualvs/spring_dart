@@ -101,9 +101,13 @@ class EntityHelper {
       ?fields.firstWhereOrNull((f) => primaryKeyChecker.hasAnnotationOf(f)),
     ];
 
-    final (:up, :down, :references) = tableScript(driver, entityName, tableName, fields, constraints);
+    final script = tableScript(driver, entityName, tableName, fields, constraints);
 
-    tables.add((name: tableName, up: up, down: down, references: references));
+    if (script != null) {
+      final (:up, :down, :references) = script;
+
+      tables.add((name: tableName, up: up, down: down, references: references));
+    }
 
     return '''class $repositoryName extends CrudRepository<$entityName> {
   final ${driver.className} ${driver.varName};
@@ -147,13 +151,14 @@ ${deleteOneParamsBuilder(driver, entityName, tableName, deleteOneParamClassName,
   }
 }
 
-({String up, String down, Set<String> references}) tableScript(
+({String up, String down, Set<String> references})? tableScript(
   Driver driver,
   String? className,
   String? tableName,
   Iterable<FieldElement> fields,
   Iterable<DartObject> constraints,
 ) {
+  if (driver is NoneDriver) return null;
   final referencedTables = <String>{};
   final constraintStrings = constraints
       .map((v) {

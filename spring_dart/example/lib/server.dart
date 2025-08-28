@@ -57,7 +57,7 @@ Future<void> server(List<String> args) async {
   // Controllers
   final authController = _$AuthController(injector.get());
   router.mount('/auth', authController.handler);
-  final usersController = _$UsersController();
+  final usersController = _$UsersController(injector.get());
   router.mount('/users', usersController.handler);
   // Server Configuration
   Handler handler = router.call;
@@ -107,7 +107,7 @@ class _$AuthController extends AuthController {
 }
 
 class _$UsersController extends UsersController {
-  _$UsersController();
+  _$UsersController(super.repository);
 
   FutureOr<Response> handler(Request request) async {
     final router = Router();
@@ -123,6 +123,26 @@ class _$UsersController extends UsersController {
         throw Exception('empty_form_data');
       }
       return upload(fields);
+    });
+
+    router.get('/', (Request request) async {
+      return get();
+    });
+
+    router.post('/', (Request request) async {
+      return post();
+    });
+
+    router.get('/<id>', (Request request, String id) async {
+      return getById(id);
+    });
+
+    router.put('/<id>', (Request request, String id) async {
+      return put(id);
+    });
+
+    router.delete('/<id>', (Request request, String id) async {
+      return delete(id);
     });
     return router.call(request);
   }

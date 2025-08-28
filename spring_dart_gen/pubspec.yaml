@@ -9,7 +9,15 @@ environment:
 
 dependencies:
   spring_dart_core:
+    git:
+      url: https://github.com/tiagualvs/spring_dart.git
+      path: spring_dart_core
+      ref: dev
   spring_dart_sql:
+    git:
+      url: https://github.com/tiagualvs/spring_dart.git
+      path: spring_dart_sql
+      ref: dev
   build: ^3.0.1
   source_gen: ^3.1.0
   analyzer: ^8.1.1

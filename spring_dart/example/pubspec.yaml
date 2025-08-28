@@ -12,12 +12,24 @@ dependencies:
   dart_jsonwebtoken: ^3.2.0
   path: ^1.9.1
   spring_dart:
+    git:
+      url: https://github.com/tiagualvs/spring_dart.git
+      path: spring_dart
+      ref: dev
   spring_dart_sql:
+    git:
+      url: https://github.com/tiagualvs/spring_dart.git
+      path: spring_dart_sql
+      ref: dev
   sqlite3: ^2.9.0
   tempoid: ^0.4.0
 
 dev_dependencies:
   build_runner: ^2.6.1
   spring_dart_gen:
+    git:
+      url: https://github.com/tiagualvs/spring_dart.git
+      path: spring_dart_gen
+      ref: dev
   lints: ^6.0.0
   test: ^1.24.0

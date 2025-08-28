@@ -12,6 +12,8 @@ class TableHelper {
   const TableHelper(this.driver, this.imports, this.repositories, this.tables);
 
   String content() {
+    if (driver is NoneDriver || tables.isEmpty) return '';
+
     final listTables = tables.toList()
       ..sort((a, b) {
         if (a.references.contains(b.name)) {

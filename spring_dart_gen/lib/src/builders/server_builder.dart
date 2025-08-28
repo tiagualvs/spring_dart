@@ -33,9 +33,12 @@ class ServerBuilder extends Builder {
 
     final package = pubspec['name'] as String? ?? 'server';
 
-    final config = loadYaml(File(p.join(Directory.current.path, 'config.yaml')).readAsStringSync());
-
-    driver = Driver.fromConfig(Map<String, dynamic>.from(config));
+    if (File(p.join(Directory.current.path, 'config.yaml')).existsSync()) {
+      final config = loadYaml(File(p.join(Directory.current.path, 'config.yaml')).readAsStringSync());
+      driver = Driver.fromConfig(Map<String, dynamic>.from(config));
+    } else {
+      driver = NoneDriver();
+    }
 
     _buildExtensions = {
       r'$package$': [p.join('bin', '$package.dart'), p.join('lib', 'server.dart')],
@@ -151,7 +154,7 @@ class ServerBuilder extends Builder {
   try {
     return await handler(request);
   }  catch (e) {
-    ${exceptionHandler.map((e) => e.methods.map((m) => '''if (e is ${exceptionHandlerChecker.firstAnnotationOf(m)?.getField('exception')?.toTypeValue()}) {
+    ${exceptionHandler.isNotEmpty ? ''' ${exceptionHandler.map((e) => e.methods.map((m) => '''if (e is ${exceptionHandlerChecker.firstAnnotationOf(m)?.getField('exception')?.toTypeValue()}) {
       return ${e.className}().${m.name}(e);
     }''').join('else \n')).join('\n')}
     else {
@@ -161,7 +164,12 @@ class ServerBuilder extends Builder {
         'error': e.toString(),
       },
     );
-    }
+    }''' : '''return Json(
+  500,
+  body: {
+    'error': e.toString(),
+  },
+);'''}
   }
 }''';
   }

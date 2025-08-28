@@ -1,3 +1,5 @@
+import 'content_type.dart';
+
 /// `@Controller`
 class Controller {
   final String path;
@@ -85,7 +87,8 @@ class Connect {
 
 /// `@Body`
 class Body {
-  const Body();
+  final ContentType contentType;
+  const Body([this.contentType = const ContentType.applicationJson()]);
 }
 
 /// `@Param`

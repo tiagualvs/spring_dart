@@ -34,7 +34,6 @@ class ControllerHelper {
         className: controllerClassName ?? '',
         content:
             'final ${controllerClassName?.toCamelCase()} = _\$$controllerClassName(${constructorParams.map((e) => 'injector.get()').join(', ')})',
-        // content: 'final ${controllerClassName?.toCamelCase()} = _\$$controllerClassName(${constructorParams.join(', ')})',
       ),
     );
 
@@ -90,23 +89,36 @@ class ControllerHelper {
       }
 
       // Dtos
-      final dtos = method.formalParameters.where((e) => bodyChecker.hasAnnotationOf(e)).toList();
-      final everyDtoHasAnnotation = dtos.isEmpty ? true : dtos.any(
-              (d) {
-                if (jsonChecker.isExactlyType(d.type)) {
-                  return true;
-                }
-                final dtoElement = d.type.element;
-                if (dtoElement == null) return false;
-                return dtoElement.metadata.annotations.any(
-                  (a) {
-                    final type = a.computeConstantValue()?.type;
-                    if (type == null) return false;
-                    return dtoChecker.isExactlyType(type);
-                  },
-                );
+      final bodies = method.formalParameters.where((e) => bodyChecker.hasAnnotationOf(e)).toList();
+      final formData = bodies.where((p) {
+        final contentType = bodyChecker.firstAnnotationOf(p)?.getField('contentType')?.getField('(super)')?.getField('value')?.toStringValue();
+
+        return contentType == 'multipart/form-data';
+      });
+      final json = bodies.where((p) {
+        final contentType = bodyChecker.firstAnnotationOf(p)?.getField('contentType')?.getField('(super)')?.getField('value')?.toStringValue();
+
+        return contentType == 'application/json';
+      });
+      final everyDtoHasAnnotation = switch (json.isNotEmpty) {
+        true => json.any(
+          (d) {
+            if (jsonChecker.isExactlyType(d.type)) {
+              return true;
+            }
+            final dtoElement = d.type.element;
+            if (dtoElement == null) return false;
+            return dtoElement.metadata.annotations.any(
+              (a) {
+                final type = a.computeConstantValue()?.type;
+                if (type == null) return false;
+                return dtoChecker.isExactlyType(type);
               },
             );
+          },
+        ),
+        false => true,
+      };
       if (!everyDtoHasAnnotation) {
         throw Exception('Only classes with @Dto annotation or @Map<String, dynamic> are allowed as body arguments.');
       }
@@ -190,10 +202,23 @@ class ControllerHelper {
           },
         );
 
+        methodBuffer.write(switch (formData.isEmpty) {
+          true => '',
+          false => '''final ${routeParams.first} = <FormData>[];
+            if (request.formData() case var form?) {
+              await for (final formData in form.formData) {
+                ${routeParams.first}.add(formData);
+              }
+            }
+            if (${routeParams.first}.isEmpty) {
+              throw Exception('empty_form_data');
+            }''',
+        });
+
         methodBuffer.write(
-          switch (dtos.isEmpty) {
+          switch (json.isEmpty) {
             true => '',
-            false => dtos.map((p) {
+            false => json.map((p) {
               final dtoType = p.type.getDisplayString();
               final dtoName = p.name;
 

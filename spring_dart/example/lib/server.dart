@@ -8,6 +8,7 @@ import 'package:example/src/config/beans/password_bean.dart';
 import 'package:example/src/config/security_configuration.dart';
 import 'package:example/src/config/server_configuration.dart';
 import 'package:example/src/controllers/auth_controller.dart';
+import 'package:example/src/controllers/users_controller.dart';
 import 'package:example/src/dtos/sign_in_dto.dart';
 import 'package:example/src/dtos/sign_up_dto.dart';
 import 'package:example/src/entities/chat_entity.dart';
@@ -56,6 +57,8 @@ Future<void> server(List<String> args) async {
   // Controllers
   final authController = _$AuthController(injector.get());
   router.mount('/auth', authController.handler);
+  final usersController = _$UsersController();
+  router.mount('/users', usersController.handler);
   // Server Configuration
   Handler handler = router.call;
   final serverConfiguration = ServerConfiguration();
@@ -98,6 +101,28 @@ class _$AuthController extends AuthController {
       final $json = await request.readAsString();
       final body = Map<String, dynamic>.from(json.decode($json));
       return refreshToken(body);
+    });
+    return router.call(request);
+  }
+}
+
+class _$UsersController extends UsersController {
+  _$UsersController();
+
+  FutureOr<Response> handler(Request request) async {
+    final router = Router();
+
+    router.post('/upload', (Request request) async {
+      final fields = <FormData>[];
+      if (request.formData() case var form?) {
+        await for (final formData in form.formData) {
+          fields.add(formData);
+        }
+      }
+      if (fields.isEmpty) {
+        throw Exception('empty_form_data');
+      }
+      return upload(fields);
     });
     return router.call(request);
   }

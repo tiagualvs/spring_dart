@@ -1,0 +1,69 @@
+import 'package:spring_dart_sql/spring_dart_sql.dart';
+
+class SpringDartHelper {
+  final Driver driver;
+  final Set<String> imports;
+  final Set<({String name, String className, String content})> springDartConfigurations;
+  final Set<({String name, String className, String content})> configurations;
+  final Set<({String name, String className, String content})> beans;
+  final Set<({String name, String className, String content})> components;
+  final Set<String> repositories;
+  final Set<({String name, String className, String content})> services;
+  final Set<({String name, String className, String content})> filters;
+  final Set<({String name, String className, String content})> controllers;
+
+  const SpringDartHelper(
+    this.driver,
+    this.imports,
+    this.springDartConfigurations,
+    this.configurations,
+    this.beans,
+    this.components,
+    this.repositories,
+    this.services,
+    this.filters,
+    this.controllers,
+  );
+
+  String content() {
+    imports.add('package:spring_dart/spring_dart.dart');
+
+    imports.add('dart:convert');
+
+    final importsSorted = imports.toList()..sort();
+
+    if (springDartConfigurations.length > 1) {
+      throw Exception('Only one SpringDartConfiguration is allowed!');
+    }
+
+    return '''// POWERED BY SPRING DART
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+${importsSorted.map((i) => 'import \'$i\';').join('\n')}
+
+Future<void> server(List<String> args) async {
+  final injector = Injector.instance;
+  final router = Router(notFoundHandler: _defaultNotFoundHandler);${configurations.isNotEmpty ? '''\n// Configurations
+  ${configurations.map((e) => '${e.content};').join('\n')}''' : ''}${beans.isNotEmpty ? '''\n// Beans
+  ${beans.map((e) => '${e.content};').join('\n')}''' : ''}${beans.isNotEmpty ? 'await injector.commit();' : ''}${components.isNotEmpty ? '''\n // Components
+  ${components.map((e) => '${e.content};').join('\n')}''' : ''}${repositories.isNotEmpty ? '''\n// Repositories
+  ${repositories.map((e) => '$e;').join('\n')}''' : ''}${services.isNotEmpty ? '''\n// Services
+  ${services.map((e) => '${e.content};').join('\n')}''' : ''}${controllers.isNotEmpty ? '''\n// Controllers
+  ${controllers.map((e) => '${e.content};').join('\n')}''' : ''}
+  // Server Configuration
+  Handler handler = router.call;${filters.isNotEmpty ? '''handler = Pipeline()${filters.map((e) => e.content).join('\n')}.addHandler(handler);''' : ''}${springDartConfigurations.isEmpty ? '''final \$defaultServerConfiguration = SpringDartConfiguration.defaultConfiguration;
+for (final middleware in \$defaultServerConfiguration.middlewares) {
+  handler = middleware(handler);
+}
+SpringDartDefaults.instance.toEncodable = \$defaultServerConfiguration.toEncodable;
+return await \$defaultServerConfiguration.setup(SpringDart((request) => _exceptionHandler(handler, request)));''' : springDartConfigurations.map((e) {
+            return '''${e.content};
+            for (final middleware in ${e.name}.middlewares) {
+              handler = middleware(handler);
+            }
+            SpringDartDefaults.instance.toEncodable = ${e.name}.toEncodable;
+            return await ${e.name}.setup(SpringDart((request) => _exceptionHandler(handler, request)));''';
+          }).join('\n')}
+}''';
+  }
+}

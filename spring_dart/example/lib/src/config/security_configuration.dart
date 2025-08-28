@@ -1,5 +1,5 @@
-import 'package:bcrypt/bcrypt.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
+import 'package:example/src/config/beans/password_bean.dart';
 import 'package:spring_dart/spring_dart.dart';
 
 @Configuration()
@@ -8,7 +8,7 @@ class SecurityConfiguration {
   JwtService jwtService() => _JwtService();
 
   @Bean()
-  PasswordService passwordService() => _PasswordService();
+  PasswordBean passwordService() => PasswordBeanImp();
 }
 
 abstract interface class JwtService {
@@ -44,17 +44,4 @@ class _JwtService implements JwtService {
     if (iat == null) return false;
     return DateTime.fromMillisecondsSinceEpoch(iat * 1000).isBefore(DateTime.now());
   }
-}
-
-abstract interface class PasswordService {
-  String hash(String password);
-  bool verify(String password, String hash);
-}
-
-class _PasswordService implements PasswordService {
-  @override
-  String hash(String password) => BCrypt.hashpw(password, BCrypt.gensalt());
-
-  @override
-  bool verify(String password, String hash) => BCrypt.checkpw(password, hash);
 }

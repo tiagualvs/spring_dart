@@ -1,65 +1,783 @@
+import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
+import 'package:analyzer/dart/element/type.dart';
+import 'package:inflection3/inflection3.dart';
 import 'package:spring_dart_gen/src/checkers.dart';
+import 'package:spring_dart_gen/src/extensions/iterable_ext.dart';
 import 'package:spring_dart_gen/src/extensions/string_ext.dart';
+import 'package:spring_dart_sql/spring_dart_sql.dart';
 
-String entityHelper(
-  ClassElement element,
-  Set<String> imports,
-  Set<({String name, String className, String content})> entities,
-) {
-  final className = element.name;
-  final tableName =
-      tableChecker.firstAnnotationOf(element)?.getField('name')?.toStringValue() ??
-      className?.removeSuffixes(['Entity', 'Model']);
-  final repositoryName = '${tableName}Repository'.toPascalCase();
-  final insertOneParamName = '${tableName}InsertOneParams'.toPascalCase();
+class EntityHelper {
+  final Set<String> imports;
+  final Set<String> repositories;
+  final Driver driver;
+  final ClassElement element;
+  final Set<({String name, String className, String content})> entities;
+  final Set<({String name, String up, String down, Set<String> references})> tables;
 
-  final fields = element.fields.where((f) => f.name != 'hashCode' && f.name != 'runtimeType');
+  const EntityHelper(this.imports, this.repositories, this.driver, this.element, this.entities, this.tables);
 
-  final requiredFields = fields.where(
-    (f) => defaultChecker.hasAnnotationOf(f) == false && generatedValueChecker.hasAnnotationOf(f) == false,
-  );
+  String content() {
+    if (driver is NoneDriver) return '';
 
-  if (!fields.any((f) => idChecker.hasAnnotationOf(f))) return '';
+    imports.add(driver.import);
 
-  imports.add(element.library.uri.toString());
+    final entityName = element.name ?? '';
+    final tableName =
+        tableChecker.firstAnnotationOf(element)?.getField('name')?.toStringValue() ??
+        pluralize(entityName.removeSuffixes(['Entity', 'Model']).toLowerCase());
+    final repositoryName = '${tableName}Repository'.toPascalCase();
+    final insertOneParamClassName = 'InsertOne${singularize(tableName).toPascalCase()}Params'.toPascalCase();
+    final findManyParamClassName = 'FindMany${tableName.toPascalCase()}Params'.toPascalCase();
+    final findOneParamClassName = 'FindOne${singularize(tableName).toPascalCase()}Params'.toPascalCase();
+    final updateOneParamClassName = 'UpdateOne${singularize(tableName).toPascalCase()}Params'.toPascalCase();
+    final deleteOneParamClassName = 'DeleteOne${singularize(tableName).toPascalCase()}Params'.toPascalCase();
 
-  final id = fields.firstWhere((f) => idChecker.hasAnnotationOf(f));
+    final fields = element.fields.where((f) => f.name != 'hashCode' && f.name != 'runtimeType');
 
-  final idType = id.type.getDisplayString();
+    imports.add('package:spring_dart_sql/spring_dart_sql.dart');
 
-  return '''class ${repositoryName}Imp extends CrudRepository<$className, $idType> {
-    @override
-    AsyncResult<$className, Exception> insertOne(InsertOneParams<$className> params) {
-      throw UnimplementedError();
-    }
+    imports.add(element.library.uri.toString());
 
-    @override
-    AsyncResult<$className, Exception> findOne(FindOneParams<$className> params) {
-      throw UnimplementedError();
-    }
+    final driverCreate = switch (driver) {
+      SqliteMemoryDriver d => <String>[
+        'final db = sqlite3.openInMemory()',
+        'db.execute(\'\'\'CREATE TABLE IF NOT EXISTS _migrations (version INTEGER PRIMARY KEY, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);\'\'\')',
+        ...switch (d.ddl) {
+          DDL.create => [
+            '// DDL AUTO CREATE - DROPPING AND RE-CREATING TABLES',
+            'final migration = DefaultMigration()',
+            'db.execute(await migration.down())',
+            'db.execute(await migration.up())',
+            'db.execute(\'DELETE FROM _migrations\')',
+            'db.execute(\'INSERT INTO _migrations (version) VALUES (1)\', [migration.version])',
+          ],
+          _ => [],
+        },
+      ],
+      SqliteFileDriver d => <String>[
+        'final db = sqlite3.open(\'${d.path}\')',
+        'db.execute(\'\'\'CREATE TABLE IF NOT EXISTS _migrations (version INTEGER PRIMARY KEY, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);\'\'\')',
+        ...switch (d.ddl) {
+          DDL.create => [
+            '// DDL AUTO CREATE - DROPPING AND RE-CREATING TABLES',
+            'final migration = DefaultMigration()',
+            'db.execute(await migration.down())',
+            'db.execute(await migration.up())',
+            'db.execute(\'DELETE FROM _migrations;\')',
+            'db.execute(\'INSERT INTO _migrations (version) VALUES (?);\', [migration.version])',
+          ],
+          _ => [],
+        },
+      ],
+      _ => <String>[],
+    };
 
-    @override
-    AsyncResult<List<$className>, Exception> findMany(FindManyParams<$className> params) {
-      throw UnimplementedError();
-    }
+    repositories.addAll(driverCreate);
 
-    @override
-    AsyncResult<$className, Exception> updateOne(UpdateOneParams<$className> params) {
-      throw UnimplementedError();
-    }
+    repositories.add('injector.set<$repositoryName>(() => $repositoryName(db))');
 
-    @override
-    AsyncResult<$className, Exception> deleteOne(DeleteOneParams<$className> params) {
-      throw UnimplementedError();
-    }
-  }
+    final requiredFields = fields
+        .where((f) => generatedValueChecker.hasAnnotationOf(f) == false)
+        .where((f) => nullableChecker.hasAnnotationOf(f) == false)
+        .where((f) => defaultChecker.hasAnnotationOf(f) == false);
+
+    final constraints = constraintChecker.annotationsOf(element);
+
+    final primaryKeyConstraint = primaryKeyConstraintChecker
+        .firstAnnotationOf(element)
+        ?.getField('columns')
+        ?.toListValue()
+        ?.map(
+          (obj) => fields.firstWhere((f) {
+            final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+            return columnName == obj.toStringValue();
+          }),
+        );
+
+    final primaryKey = [
+      ...?primaryKeyConstraint,
+      ?fields.firstWhereOrNull((f) => primaryKeyChecker.hasAnnotationOf(f)),
+    ];
+
+    final (:up, :down, :references) = tableScript(driver, entityName, tableName, fields, constraints);
+
+    tables.add((name: tableName, up: up, down: down, references: references));
+
+    return '''class $repositoryName extends CrudRepository<$entityName> {
+  final ${driver.className} ${driver.varName};
+  const $repositoryName(this.${driver.varName});
   
-  class $insertOneParamName extends InsertOneParams<$className> {
-    ${requiredFields.map((f) => 'final ${f.type.getDisplayString()} ${f.name};').join('\n')}
+  @override
+  Future<$entityName> insertOne(InsertOneParams<$entityName> params) async {
+    ${insertOneMethodBuilder(driver, tableName, entityName, fields)}
+  }
 
-    const $insertOneParamName({
-      ${requiredFields.map((f) => 'required this.${f.name},').join('\n')}
-    });
+  @override
+  Future<$entityName> findOne(FindOneParams<$entityName> params) async {
+    ${findOneMethodBuilder(driver, tableName, entityName, fields)}
+  }
+
+  @override
+  Future<List<$entityName>> findMany(FindManyParams<$entityName> params) async {
+    ${findManyMethodBuilder(driver, tableName, entityName, fields)}
+  }
+
+  @override
+  Future<$entityName> updateOne(UpdateOneParams<$entityName> params) async {
+    ${updateOneMethodBuilder(driver, tableName, entityName, fields)}
+  }
+
+  @override
+  Future<$entityName> deleteOne(DeleteOneParams<$entityName> params) async {
+    ${deleteOneMethodBuilder(driver, tableName, entityName, fields)}
+  }
+}
+
+${insertOneParamsBuilder(driver, entityName, tableName, insertOneParamClassName, requiredFields)}
+
+${findOneParamsBuilder(driver, entityName, tableName, findOneParamClassName, fields, primaryKey)}
+
+${findManyParamsbuilder(driver, entityName, tableName, findManyParamClassName, fields)}
+
+${updateOneParamsBuilder(driver, entityName, tableName, updateOneParamClassName, fields, primaryKey)}
+
+${deleteOneParamsBuilder(driver, entityName, tableName, deleteOneParamClassName, primaryKey)}''';
+  }
+}
+
+({String up, String down, Set<String> references}) tableScript(
+  Driver driver,
+  String? className,
+  String? tableName,
+  Iterable<FieldElement> fields,
+  Iterable<DartObject> constraints,
+) {
+  final referencedTables = <String>{};
+  final constraintStrings = constraints
+      .map((v) {
+        final type = v.type;
+        if (type == null) return '';
+        if (foreignKeyConstraintChecker.isExactlyType(type)) {
+          final fromColumns = v.getField('fromColumns')?.toListValue();
+          final toTable = v.getField('toTable')?.toStringValue() ?? '';
+          final toColumns = v.getField('toColumns')?.toListValue();
+          final onDelete = v.getField('onDelete')?.getField('value')?.toStringValue() ?? '';
+          final onUpdate = v.getField('onUpdate')?.getField('value')?.toStringValue() ?? '';
+
+          referencedTables.add(toTable);
+
+          return 'CONSTRAINT fk_${tableName}_${fromColumns?.map((e) => e.toStringValue()).join('_')} FOREIGN KEY (${fromColumns?.map((e) => e.toStringValue()).join(', ')}) REFERENCES $toTable (${toColumns?.map((e) => e.toStringValue()).join(', ')}) ON DELETE $onDelete ON UPDATE $onUpdate';
+        } else if (primaryKeyConstraintChecker.isExactlyType(type)) {
+          final columns = v.getField('columns')?.toListValue();
+          return 'CONSTRAINT pk_${tableName}_${columns?.map((e) => e.toStringValue()).join('_')} PRIMARY KEY (${columns?.map((e) => e.toStringValue()).join(', ')})';
+        } else if (uniqueConstraintChecker.isExactlyType(type)) {
+          final columns = v.getField('columns')?.toListValue();
+          return 'CONSTRAINT uq_${tableName}_${columns?.map((e) => e.toStringValue()).join('_')} UNIQUE (${columns?.map((e) => e.toStringValue()).join(', ')})';
+        } else {
+          return '';
+        }
+      })
+      .where((v) => v.isNotEmpty)
+      .map((v) => v)
+      .toList();
+  return (
+    up:
+        '''CREATE TABLE IF NOT EXISTS $tableName (
+${fields.map((f) {
+          final column = columnChecker.firstAnnotationOf(f);
+          final columnName = column?.getField('name')?.toStringValue() ?? f.name;
+          final columnType = buildColumnType(driver, f);
+          final hasPk = primaryKeyChecker.hasAnnotationOf(f);
+          final hasUnique = uniqueChecker.hasAnnotationOf(f);
+          final hasNullable = nullableChecker.hasAnnotationOf(f);
+          final hasCheck = checkChecker.hasAnnotationOf(f);
+          final hasDefault = defaultChecker.hasAnnotationOf(f);
+          final hasGeneratedValue = generatedValueChecker.hasAnnotationOf(f);
+          final hasReferences = referencesChecker.hasAnnotationOf(f);
+          final primaryKeyString = hasPk ? ' PRIMARY KEY' : '';
+          final uniqueString = hasUnique && !hasPk ? ' UNIQUE' : '';
+          final nullableString = !hasNullable && !hasPk ? ' NOT NULL' : '';
+          if (hasDefault && hasGeneratedValue) {
+            throw Exception('Cannot use generated value and default value at the same time!');
+          }
+          final defaultString = switch (hasDefault) {
+            true => ' DEFAULT ${defaultChecker.firstAnnotationOf(f)?.getField('value')?.getField('value')?.toStringValue() ?? ''}',
+            _ => '',
+          };
+          final generatedValueString = switch (hasGeneratedValue) {
+            true => defaultGeneratedValueByType(columnType),
+            _ => '',
+          };
+          final referencesString = switch (hasReferences) {
+            true => referencesStringBuilder(referencesChecker.firstAnnotationOf(f), referencedTables),
+            _ => '',
+          };
+          final checkString = switch (hasCheck) {
+            true => checkStringBuilder(f),
+            _ => '',
+          };
+          return '  $columnName $columnType$primaryKeyString$nullableString$uniqueString$defaultString$generatedValueString$referencesString$checkString';
+        }).join(',\n')}${constraintStrings.isNotEmpty ? ',\n  ${constraintStrings.join(',\n  ')}' : ''}
+);''',
+    down: 'DROP TABLE IF EXISTS $tableName;',
+    references: referencedTables,
+  );
+}
+
+String buildColumnType(Driver driver, FieldElement field) {
+  final column = columnChecker.firstAnnotationOf(field);
+  final columnType = column?.getField('type')?.getField('(super)')?.getField('value')?.toStringValue();
+  if (columnType == null) return genericSqlType(driver, field.type);
+  return switch (columnType) {
+    'UUID' when driver.sqlite => 'TEXT',
+    'TIMESTAMP' when driver.sqlite => 'TEXT',
+    'BOOLEAN' when driver.sqlite => 'INTEGER',
+    _ => columnType,
+  };
+}
+
+String genericSqlType(Driver driver, DartType type) {
+  return switch (driver) {
+    SqliteFileDriver _ || SqliteMemoryDriver _ => genericSqliteType(type),
+    _ => 'NULL',
+  };
+}
+
+String genericSqliteType(DartType type) {
+  return switch (type.getDisplayString()) {
+    'int' => 'INTEGER',
+    'String' => 'TEXT',
+    'DateTime' => 'TEXT',
+    'bool' => 'INTEGER',
+    _ => 'TEXT',
+  };
+}
+
+String defaultGeneratedValueByType(String type) {
+  return switch (type) {
+    'INTEGER' => ' AUTOINCREMENT',
+    'UUID' => ' DEFAULT gen_random_uuid()',
+    'TEXT' => '',
+    _ => '',
+  };
+}
+
+String checkStringBuilder(FieldElement field) {
+  final column = columnChecker.firstAnnotationOf(field);
+  final columnName = column?.getField('name')?.toStringValue() ?? field.name;
+  final check = checkChecker.firstAnnotationOf(field);
+  if (check == null) return '';
+  final operator = check.getField('operator')?.getField('(super)')?.getField('value')?.toStringValue() ?? '';
+  final condition = check.getField('condition');
+  final conditionValue = switch (condition?.type?.getDisplayString()) {
+    'List<String>' => '(${condition?.toListValue()?.map((d) => '\'${d.toStringValue()}\'').join(', ')})',
+    'String' => '\'${condition?.toStringValue()}\'',
+    _ => condition?.toStringValue(),
+  };
+  return ' CHECK ($columnName $operator $conditionValue)';
+}
+
+String referencesStringBuilder(DartObject? type, Set<String> referencedTables) {
+  if (type == null) return '';
+  final table = type.getField('table')?.toStringValue() ?? '';
+  final column = type.getField('column')?.toStringValue() ?? '';
+  final onDelete = type.getField('onDelete')?.getField('value')?.toStringValue() ?? '';
+  final onUpdate = type.getField('onUpdate')?.getField('value')?.toStringValue() ?? '';
+  assert(table.isNotEmpty && column.isNotEmpty, Exception('Invalid references annotation!'));
+  referencedTables.add(table);
+  return ' REFERENCES $table($column) ON DELETE $onDelete ON UPDATE $onUpdate';
+}
+
+String insertOneMethodBuilder(
+  Driver driver,
+  String tableName,
+  String entityName,
+  Iterable<FieldElement> fields,
+) {
+  return switch (driver) {
+    SqliteFileDriver _ || SqliteMemoryDriver _ => _insertOneInSQLITE(driver.varName, tableName, entityName, fields),
+    _ => '',
+  };
+}
+
+String findOneMethodBuilder(
+  Driver driver,
+  String tableName,
+  String entityName,
+  Iterable<FieldElement> fields,
+) {
+  return switch (driver) {
+    SqliteFileDriver _ || SqliteMemoryDriver _ => _findOneInSQLITE(driver.varName, tableName, entityName, fields),
+    _ => '',
+  };
+}
+
+String findManyMethodBuilder(
+  Driver driver,
+  String tableName,
+  String entityName,
+  Iterable<FieldElement> fields,
+) {
+  return switch (driver) {
+    SqliteFileDriver _ ||
+    SqliteMemoryDriver _ => _findManyInSQLITE(driver.varName, tableName, entityName, fields.toList()),
+    _ => '',
+  };
+}
+
+String updateOneMethodBuilder(Driver driver, String tableName, String entityName, Iterable<FieldElement> fields) {
+  return switch (driver) {
+    SqliteFileDriver _ || SqliteMemoryDriver _ => _updateOneInSQLITE(driver.varName, tableName, entityName, fields),
+    _ => '',
+  };
+}
+
+String deleteOneMethodBuilder(Driver driver, String tableName, String entityName, Iterable<FieldElement> fields) {
+  return switch (driver) {
+    SqliteFileDriver _ || SqliteMemoryDriver _ => _deleteOneInSQLITE(driver.varName, tableName, entityName, fields),
+    _ => '',
+  };
+}
+
+String insertOneParamsBuilder(
+  Driver driver,
+  String entityName,
+  String tableName,
+  String className,
+  Iterable<FieldElement> requiredFields,
+) {
+  return '''class $className extends InsertOneParams<$entityName> {
+  ${requiredFields.map((f) => 'final ${f.type.getDisplayString()} ${f.name};').join('\n')}
+
+  const $className({${requiredFields.map((f) => 'required this.${f.name},').join('\n')}});
+
+  @override
+  String get query => 'INSERT INTO $tableName (${requiredFields.map((f) {
+    final column = columnChecker.firstAnnotationOf(f);
+    final columnName = column?.getField('name')?.toStringValue() ?? '${f.name}';
+    return columnName;
+  }).join(', ')}) VALUES (${requiredFields.map((f) => '?').join(', ')}) RETURNING *;';
+
+  @override
+  List<Object?> get values => [${requiredFields.map((f) => '${f.name}').join(', ')}];
+}''';
+}
+
+String findOneParamsBuilder(
+  Driver driver,
+  String entityName,
+  String tableName,
+  String className,
+  Iterable<FieldElement> fields,
+  Iterable<FieldElement> primaryKey,
+) {
+  final classFields = switch (primaryKey.isNotEmpty) {
+    true => primaryKey.map((f) => 'final ${f.type.getDisplayString()} ${f.name};').join('\n'),
+    false => 'final Where where;',
+  };
+
+  final classParams = switch (primaryKey.isNotEmpty) {
+    true => primaryKey.map((f) => 'this.${f.name}').join(', '),
+    false => 'this.where',
+  };
+
+  final classQuery = switch (primaryKey.isNotEmpty) {
+    true =>
+      '''return 'SELECT * FROM $tableName WHERE ${primaryKey.map((f) {
+        final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+        return '$columnName = ?';
+      }).join(' AND ')}';''',
+    false =>
+      '''if (where.isEmpty) throw Exception('empty_params');
+    
+    return 'SELECT * FROM $tableName WHERE \${where.query}';''',
+  };
+
+  final classValues = switch (primaryKey.isNotEmpty) {
+    true => 'return [${primaryKey.map((f) => f.name).join(', ')}];',
+    false =>
+      '''if (where.isEmpty) throw Exception('empty_params');
+    
+    return where.values;''',
+  };
+
+  return '''class $className extends FindOneParams<$entityName> {
+  $classFields
+  const $className($classParams);
+
+  @override
+  String get query {
+    $classQuery
+  }
+
+  @override
+  List<Object?> get values {
+    $classValues
+  }
+}''';
+}
+
+String findManyParamsbuilder(
+  Driver driver,
+  String entityName,
+  String tableName,
+  String className,
+  Iterable<FieldElement> fields,
+) {
+  return '''class $className extends FindManyParams<$entityName> {
+  final Where? where;
+  const $className([this.where]);
+
+  @override
+  String get query => switch (where != null) {
+    true => 'SELECT * FROM $tableName WHERE \${where?.query}',
+    _ => 'SELECT * FROM $tableName;',
+  };
+
+  @override
+  List<Object?> get values => where?.values ?? [];
+}''';
+}
+
+String updateOneParamsBuilder(
+  Driver driver,
+  String entityName,
+  String tableName,
+  String className,
+  Iterable<FieldElement> fields,
+  Iterable<FieldElement> primaryKey,
+) {
+  final requiredFields = switch (primaryKey.isNotEmpty) {
+    true => primaryKey.map((f) => 'final ${f.type.getDisplayString()} ${f.name};').join('\n'),
+    _ => 'final Where where;',
+  };
+
+  final classFields = '''$requiredFields
+${fields.where((f) => !primaryKey.contains(f)).map((f) => 'final ${f.type.getDisplayString()}${f.type.nullabilitySuffix == NullabilitySuffix.none ? '?' : ''} ${f.name};').join('\n')}''';
+
+  final requiredParams = switch (primaryKey.isNotEmpty) {
+    true => primaryKey.map((f) => 'this.${f.name},').join('\n'),
+    _ => 'this.where',
+  };
+
+  final classParams =
+      '''$requiredParams{
+${fields.where((f) => !primaryKey.contains(f)).map((f) => 'this.${f.name}').join(', ')}
+}''';
+
+  final classQuery = switch (primaryKey.isNotEmpty) {
+    true =>
+      '''return 'UPDATE $tableName SET \${_map().entries.map((e) => '\${e.key} = ?').join(', ')} WHERE ${primaryKey.map((f) {
+        final fieldName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+        return '$fieldName = ?';
+      }).join(' AND ')} RETURNING *;';''',
+    false =>
+      '''if (where.isEmpty) throw Exception('no_filters_given');
+    
+    return 'UPDATE $tableName SET \${_map().entries.map((e) => '{e.key} = ?').join(', ')} WHERE \${where.query} RETURNING *;';''',
+  };
+
+  final classValues = switch (primaryKey.isNotEmpty) {
+    true => '''return [..._map().values, ${primaryKey.map((f) => f.name).join(', ')}];''',
+    false =>
+      '''if (where.isEmpty) throw Exception('no_filters_given');
+
+    return [..._map().values, ...where.values];''',
+  };
+
+  return '''class $className extends UpdateOneParams<$entityName> {
+  $classFields
+  const $className($classParams);
+
+  Map<String, dynamic> _map() => <String, dynamic>{
+    ${fields.where((f) => !primaryKey.contains(f)).map((f) {
+    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return 'if (${f.name} != null) \'$columnName\': ${f.name},';
+  }).join('\n')}
+  };
+
+  @override
+  String get query {
+    if (_map().isEmpty) {
+      throw Exception('no_fields_to_update');
+    }
+
+    $classQuery
+  }
+
+  @override
+  List<Object?> get values {
+    if (_map().isEmpty) {
+      throw Exception('no_fields_to_update');
+    }
+
+    $classValues
+  }
+}''';
+}
+
+String deleteOneParamsBuilder(
+  Driver driver,
+  String entityName,
+  String tableName,
+  String className,
+  Iterable<FieldElement> primaryKey,
+) {
+  final classFields = switch (primaryKey.isNotEmpty) {
+    true => primaryKey.map((f) => 'final ${f.type.getDisplayString()} ${f.name};').join('\n'),
+    false => 'final Where where;',
+  };
+
+  final classParams = switch (primaryKey.isNotEmpty) {
+    true => primaryKey.map((f) => 'this.${f.name}').join(', '),
+    false => 'this.where',
+  };
+
+  final classQuery = switch (primaryKey.isNotEmpty) {
+    true =>
+      '''return 'DELETE FROM $tableName WHERE ${primaryKey.map((f) {
+        final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+        return '$columnName = ?';
+      }).join(' AND ')}';''',
+    false =>
+      '''if (where.isEmpty) throw Exception('empty_params');
+    
+    return 'DELETE FROM $tableName WHERE \${where.query}';''',
+  };
+
+  final classValues = switch (primaryKey.isNotEmpty) {
+    true => 'return [${primaryKey.map((f) => f.name).join(', ')}];',
+    false =>
+      '''if (where.isEmpty) throw Exception('empty_params');
+    
+    return where.values;''',
+  };
+
+  return '''class $className extends DeleteOneParams<$entityName> {
+  $classFields
+  const $className($classParams);
+
+  @override
+  String get query {
+    $classQuery
+  }
+
+  @override
+  List<Object?> get values {
+    $classValues
+  }
+}''';
+}
+
+String _insertOneInSQLITE(
+  String dialectVarName,
+  String tableName,
+  String className,
+  Iterable<FieldElement> fields,
+) {
+  return '''try {
+  final stmt = $dialectVarName.prepare(params.query);
+
+  final result = stmt.select(params.values);
+
+  if (result.isEmpty) {
+    throw Exception('not_found');
+  }
+
+  final row = result.first;
+
+  final copy = Map<String, dynamic>.from(row);${fields.map((f) {
+    final column = columnChecker.firstAnnotationOf(f);
+    final columnName = column?.getField('name')?.toStringValue() ?? f.name;
+    final columnType = column?.getField('type')?.type;
+    if (dateTimeChecker.isExactlyType(f.type) || (columnType != null && timestampChecker.isExactlyType(columnType))) {
+      return 'copy[\'$columnName\'] = DateTime.parse(copy[\'$columnName\']);\n';
+    } else {
+      return '';
+    }
+  }).join('')}return DSON().fromJson<$className>(
+      copy, 
+      $className.new,
+      aliases: {
+        $className: {
+          ${fields.map((f) {
+    final column = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return '\'${f.name}\':\'$column\'';
+  }).join(',\n')}
+        }
+      }
+    );
+} on Exception catch (e) {
+  throw Exception('Failed to insert $tableName: \$e');
+}''';
+}
+
+String _findOneInSQLITE(
+  String dialectVarName,
+  String tableName,
+  String className,
+  Iterable<FieldElement> fields,
+) {
+  return '''try {
+final stmt = $dialectVarName.prepare(params.query);
+
+final result = stmt.select(params.values);
+
+if (result.isEmpty) {
+  throw Exception('not_found');
+}
+
+final row = result.first;
+
+final copy = Map<String, dynamic>.from(row);${fields.map((f) {
+    final column = columnChecker.firstAnnotationOf(f);
+    final columnName = column?.getField('name')?.toStringValue() ?? f.name;
+    final columnType = column?.getField('type')?.type;
+    if (dateTimeChecker.isExactlyType(f.type) || (columnType != null && timestampChecker.isExactlyType(columnType))) {
+      return 'copy[\'$columnName\'] = DateTime.parse(copy[\'$columnName\']);\n';
+    } else {
+      return '';
+    }
+  }).join('')}return DSON().fromJson<$className>(
+    copy, 
+    $className.new,
+    aliases: {
+      $className: {
+        ${fields.map((f) {
+    final column = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return '\'${f.name}\':\'$column\'';
+  }).join(',\n')}
+      }
+    }
+  );
+  } on Exception catch (e) {
+    throw Exception('Failed to find $tableName: \$e');
+  }''';
+}
+
+String _findManyInSQLITE(
+  String dialectVarName,
+  String tableName,
+  String className,
+  List<FieldElement> fields,
+) {
+  return '''try {
+final stmt = $dialectVarName.prepare(params.query);
+
+final result = stmt.select(params.values);
+
+return result.map((row) {
+  final copy = Map<String, dynamic>.from(row);${fields.map((f) {
+    final column = columnChecker.firstAnnotationOf(f);
+    final columnName = column?.getField('name')?.toStringValue() ?? f.name;
+    final columnType = column?.getField('type')?.type;
+    if (dateTimeChecker.isExactlyType(f.type) || (columnType != null && timestampChecker.isExactlyType(columnType))) {
+      return 'copy[\'$columnName\'] = DateTime.parse(copy[\'$columnName\']);\n';
+    } else {
+      return '';
+    }
+  }).join('')}return DSON().fromJson<$className>(
+    copy, 
+    $className.new,
+    aliases: {
+      $className: {
+        ${fields.map((f) {
+    final column = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return '\'${f.name}\':\'$column\'';
+  }).join(',\n')}
+      }
+    }
+  );
+}).toList();
+  } on Exception catch (e) {
+    throw Exception('Failed to find $tableName: \$e');
+  }''';
+}
+
+String _updateOneInSQLITE(
+  String dialectVarName,
+  String tableName,
+  String className,
+  Iterable<FieldElement> fields,
+) {
+  return '''try {
+final stmt = $dialectVarName.prepare(params.query);
+
+final result = stmt.select(params.values);
+
+if (result.isEmpty) {
+  throw Exception('not_found');
+}
+
+final row = result.first;
+
+final copy = Map<String, dynamic>.from(row);${fields.map((f) {
+    final column = columnChecker.firstAnnotationOf(f);
+    final columnName = column?.getField('name')?.toStringValue() ?? f.name;
+    final columnType = column?.getField('type')?.type;
+    if (dateTimeChecker.isExactlyType(f.type) || (columnType != null && timestampChecker.isExactlyType(columnType))) {
+      return 'copy[\'$columnName\'] = DateTime.parse(copy[\'$columnName\']);\n';
+    } else {
+      return '';
+    }
+  }).join('')}return DSON().fromJson<$className>(
+    copy, 
+    $className.new,
+    aliases: {
+      $className: {
+        ${fields.map((f) {
+    final column = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return '\'${f.name}\':\'$column\'';
+  }).join(',\n')}
+      }
+    }
+  );
+  } on Exception catch (e) {
+    throw Exception('Failed to update $tableName: \$e');
+  }''';
+}
+
+String _deleteOneInSQLITE(
+  String dialectVarName,
+  String tableName,
+  String className,
+  Iterable<FieldElement> fields,
+) {
+  return '''try {
+final stmt = $dialectVarName.prepare(params.query);
+
+final result = stmt.select(params.values);
+
+if (result.isEmpty) {
+  throw Exception('not_found');
+}
+
+final row = result.first;
+
+final copy = Map<String, dynamic>.from(row);${fields.map((f) {
+    final column = columnChecker.firstAnnotationOf(f);
+    final columnName = column?.getField('name')?.toStringValue() ?? f.name;
+    final columnType = column?.getField('type')?.type;
+    if (dateTimeChecker.isExactlyType(f.type) || (columnType != null && timestampChecker.isExactlyType(columnType))) {
+      return 'copy[\'$columnName\'] = DateTime.parse(copy[\'$columnName\']);\n';
+    } else {
+      return '';
+    }
+  }).join('')}return DSON().fromJson<$className>(
+    copy, 
+    $className.new,
+    aliases: {
+      $className: {
+        ${fields.map((f) {
+    final column = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return '\'${f.name}\':\'$column\'';
+  }).join(',\n')}
+      }
+    }
+  );
+  } on Exception catch (e) {
+    throw Exception('Failed to delete $tableName: \$e');
   }''';
 }

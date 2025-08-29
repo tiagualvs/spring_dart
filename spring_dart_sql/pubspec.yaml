@@ -2,7 +2,7 @@ name: spring_dart_sql
 description: A starting point for Dart libraries or applications.
 version: 1.0.0
 
-resolution: workspace
+publish_to: none
 
 environment:
   sdk: ^3.9.0

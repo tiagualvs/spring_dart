@@ -394,7 +394,7 @@ String insertOneParamsBuilder(
       .join('\n');
 
   final classQuery =
-      r'''INSERT INTO users (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;''';
+      '''INSERT INTO $tableName (\${_map().keys.map((k) => k).join(', ')}) VALUES (\${_map().keys.map((_) => '?').join(', ')}) RETURNING *;''';
 
   final classValues = r'newMap.values.toList()';
 

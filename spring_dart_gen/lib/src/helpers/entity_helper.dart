@@ -627,7 +627,28 @@ String _insertOneInSQLITE(
     return '\'${f.name}\':\'$column\'';
   }).join(',\n')}
         }
-      }
+      },
+      resolvers: [
+        (key, value) {
+          if (value is DateTime) {
+            return value.toIso8601String();
+          }
+
+          ${fields.map((f) {
+    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return '''if (key == '$columnName' && value == null) {
+      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
+      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
+      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
+      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
+    }''';
+  }).join('\n')}
+
+          return value;
+        }
+      ]
     );
 } on Exception catch (e) {
   throw Exception('Failed to insert $tableName: \$e');
@@ -670,7 +691,28 @@ final copy = Map<String, dynamic>.from(row);${fields.map((f) {
     return '\'${f.name}\':\'$column\'';
   }).join(',\n')}
       }
-    }
+    },
+    resolvers: [
+        (key, value) {
+          if (value is DateTime) {
+            return value.toIso8601String();
+          }
+
+          ${fields.map((f) {
+    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return '''if (key == '$columnName' && value == null) {
+      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
+      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
+      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
+      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
+    }''';
+  }).join('\n')}
+
+          return value;
+        }
+      ]
   );
   } on Exception catch (e) {
     throw Exception('Failed to find $tableName: \$e');
@@ -708,7 +750,28 @@ return result.map((row) {
     return '\'${f.name}\':\'$column\'';
   }).join(',\n')}
       }
-    }
+    },
+    resolvers: [
+        (key, value) {
+          if (value is DateTime) {
+            return value.toIso8601String();
+          }
+
+          ${fields.map((f) {
+    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return '''if (key == '$columnName' && value == null) {
+      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
+      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
+      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
+      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
+    }''';
+  }).join('\n')}
+
+          return value;
+        }
+      ]
   );
 }).toList();
   } on Exception catch (e) {
@@ -752,7 +815,28 @@ final copy = Map<String, dynamic>.from(row);${fields.map((f) {
     return '\'${f.name}\':\'$column\'';
   }).join(',\n')}
       }
-    }
+    },
+    resolvers: [
+        (key, value) {
+          if (value is DateTime) {
+            return value.toIso8601String();
+          }
+
+          ${fields.map((f) {
+    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return '''if (key == '$columnName' && value == null) {
+      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
+      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
+      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
+      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
+    }''';
+  }).join('\n')}
+
+          return value;
+        }
+      ]
   );
   } on Exception catch (e) {
     throw Exception('Failed to update $tableName: \$e');
@@ -795,7 +879,28 @@ final copy = Map<String, dynamic>.from(row);${fields.map((f) {
     return '\'${f.name}\':\'$column\'';
   }).join(',\n')}
       }
-    }
+    },
+    resolvers: [
+        (key, value) {
+          if (value is DateTime) {
+            return value.toIso8601String();
+          }
+
+          ${fields.map((f) {
+    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return '''if (key == '$columnName' && value == null) {
+      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
+      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
+      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
+      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
+    }''';
+  }).join('\n')}
+
+          return value;
+        }
+      ]
   );
   } on Exception catch (e) {
     throw Exception('Failed to delete $tableName: \$e');

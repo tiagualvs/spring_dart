@@ -115,27 +115,27 @@ class EntityHelper {
   
   @override
   Future<$entityName> insertOne(InsertOneParams<$entityName> params) async {
-    ${insertOneMethodBuilder(driver, tableName, entityName, fields)}
+    ${insertOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
   }
 
   @override
   Future<$entityName> findOne(FindOneParams<$entityName> params) async {
-    ${findOneMethodBuilder(driver, tableName, entityName, fields)}
+    ${findOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
   }
 
   @override
   Future<List<$entityName>> findMany(FindManyParams<$entityName> params) async {
-    ${findManyMethodBuilder(driver, tableName, entityName, fields)}
+    ${findManyMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
   }
 
   @override
   Future<$entityName> updateOne(UpdateOneParams<$entityName> params) async {
-    ${updateOneMethodBuilder(driver, tableName, entityName, fields)}
+    ${updateOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
   }
 
   @override
   Future<$entityName> deleteOne(DeleteOneParams<$entityName> params) async {
-    ${deleteOneMethodBuilder(driver, tableName, entityName, fields)}
+    ${deleteOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
   }
 }
 
@@ -300,9 +300,11 @@ String insertOneMethodBuilder(
   String tableName,
   String entityName,
   Iterable<FieldElement> fields,
+  List<ConstructorElement> constructors,
 ) {
   return switch (driver) {
-    SqliteFileDriver _ || SqliteMemoryDriver _ => _insertOneInSQLITE(driver.varName, tableName, entityName, fields),
+    SqliteFileDriver _ ||
+    SqliteMemoryDriver _ => _insertOneInSQLITE(driver.varName, tableName, entityName, fields, constructors),
     _ => '',
   };
 }
@@ -312,9 +314,11 @@ String findOneMethodBuilder(
   String tableName,
   String entityName,
   Iterable<FieldElement> fields,
+  List<ConstructorElement> constructors,
 ) {
   return switch (driver) {
-    SqliteFileDriver _ || SqliteMemoryDriver _ => _findOneInSQLITE(driver.varName, tableName, entityName, fields),
+    SqliteFileDriver _ ||
+    SqliteMemoryDriver _ => _findOneInSQLITE(driver.varName, tableName, entityName, fields, constructors),
     _ => '',
   };
 }
@@ -324,24 +328,39 @@ String findManyMethodBuilder(
   String tableName,
   String entityName,
   Iterable<FieldElement> fields,
+  List<ConstructorElement> constructors,
 ) {
   return switch (driver) {
     SqliteFileDriver _ ||
-    SqliteMemoryDriver _ => _findManyInSQLITE(driver.varName, tableName, entityName, fields.toList()),
+    SqliteMemoryDriver _ => _findManyInSQLITE(driver.varName, tableName, entityName, fields.toList(), constructors),
     _ => '',
   };
 }
 
-String updateOneMethodBuilder(Driver driver, String tableName, String entityName, Iterable<FieldElement> fields) {
+String updateOneMethodBuilder(
+  Driver driver,
+  String tableName,
+  String entityName,
+  Iterable<FieldElement> fields,
+  List<ConstructorElement> constructors,
+) {
   return switch (driver) {
-    SqliteFileDriver _ || SqliteMemoryDriver _ => _updateOneInSQLITE(driver.varName, tableName, entityName, fields),
+    SqliteFileDriver _ ||
+    SqliteMemoryDriver _ => _updateOneInSQLITE(driver.varName, tableName, entityName, fields, constructors),
     _ => '',
   };
 }
 
-String deleteOneMethodBuilder(Driver driver, String tableName, String entityName, Iterable<FieldElement> fields) {
+String deleteOneMethodBuilder(
+  Driver driver,
+  String tableName,
+  String entityName,
+  Iterable<FieldElement> fields,
+  List<ConstructorElement> constructors,
+) {
   return switch (driver) {
-    SqliteFileDriver _ || SqliteMemoryDriver _ => _deleteOneInSQLITE(driver.varName, tableName, entityName, fields),
+    SqliteFileDriver _ ||
+    SqliteMemoryDriver _ => _deleteOneInSQLITE(driver.varName, tableName, entityName, fields, constructors),
     _ => '',
   };
 }
@@ -596,6 +615,7 @@ String _insertOneInSQLITE(
   String tableName,
   String className,
   Iterable<FieldElement> fields,
+  List<ConstructorElement> constructors,
 ) {
   return '''try {
   final stmt = $dialectVarName.prepare(params.query);
@@ -608,48 +628,7 @@ String _insertOneInSQLITE(
 
   final row = result.first;
 
-  final copy = Map<String, dynamic>.from(row);${fields.map((f) {
-    final column = columnChecker.firstAnnotationOf(f);
-    final columnName = column?.getField('name')?.toStringValue() ?? f.name;
-    final columnType = column?.getField('type')?.type;
-    if (dateTimeChecker.isExactlyType(f.type) || (columnType != null && timestampChecker.isExactlyType(columnType))) {
-      return 'copy[\'$columnName\'] = DateTime.parse(copy[\'$columnName\']);\n';
-    } else {
-      return '';
-    }
-  }).join('')}return DSON().fromJson<$className>(
-      copy, 
-      $className.new,
-      aliases: {
-        $className: {
-          ${fields.map((f) {
-    final column = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    return '\'${f.name}\':\'$column\'';
-  }).join(',\n')}
-        }
-      },
-      resolvers: [
-        (key, value) {
-          if (value is DateTime) {
-            return value.toIso8601String();
-          }
-
-          ${fields.map((f) {
-    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    return '''if (key == '$columnName' && value == null) {
-      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
-      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
-      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
-      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
-      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
-      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
-    }''';
-  }).join('\n')}
-
-          return value;
-        }
-      ]
-    );
+  return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
 } on Exception catch (e) {
   throw Exception('Failed to insert $tableName: \$e');
 }''';
@@ -660,6 +639,7 @@ String _findOneInSQLITE(
   String tableName,
   String className,
   Iterable<FieldElement> fields,
+  List<ConstructorElement> constructors,
 ) {
   return '''try {
 final stmt = $dialectVarName.prepare(params.query);
@@ -672,48 +652,8 @@ if (result.isEmpty) {
 
 final row = result.first;
 
-final copy = Map<String, dynamic>.from(row);${fields.map((f) {
-    final column = columnChecker.firstAnnotationOf(f);
-    final columnName = column?.getField('name')?.toStringValue() ?? f.name;
-    final columnType = column?.getField('type')?.type;
-    if (dateTimeChecker.isExactlyType(f.type) || (columnType != null && timestampChecker.isExactlyType(columnType))) {
-      return 'copy[\'$columnName\'] = DateTime.parse(copy[\'$columnName\']);\n';
-    } else {
-      return '';
-    }
-  }).join('')}return DSON().fromJson<$className>(
-    copy, 
-    $className.new,
-    aliases: {
-      $className: {
-        ${fields.map((f) {
-    final column = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    return '\'${f.name}\':\'$column\'';
-  }).join(',\n')}
-      }
-    },
-    resolvers: [
-        (key, value) {
-          if (value is DateTime) {
-            return value.toIso8601String();
-          }
+  return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
 
-          ${fields.map((f) {
-    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    return '''if (key == '$columnName' && value == null) {
-      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
-      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
-      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
-      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
-      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
-      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
-    }''';
-  }).join('\n')}
-
-          return value;
-        }
-      ]
-  );
   } on Exception catch (e) {
     throw Exception('Failed to find $tableName: \$e');
   }''';
@@ -724,6 +664,7 @@ String _findManyInSQLITE(
   String tableName,
   String className,
   List<FieldElement> fields,
+  List<ConstructorElement> constructors,
 ) {
   return '''try {
 final stmt = $dialectVarName.prepare(params.query);
@@ -731,48 +672,7 @@ final stmt = $dialectVarName.prepare(params.query);
 final result = stmt.select(params.values);
 
 return result.map((row) {
-  final copy = Map<String, dynamic>.from(row);${fields.map((f) {
-    final column = columnChecker.firstAnnotationOf(f);
-    final columnName = column?.getField('name')?.toStringValue() ?? f.name;
-    final columnType = column?.getField('type')?.type;
-    if (dateTimeChecker.isExactlyType(f.type) || (columnType != null && timestampChecker.isExactlyType(columnType))) {
-      return 'copy[\'$columnName\'] = DateTime.parse(copy[\'$columnName\']);\n';
-    } else {
-      return '';
-    }
-  }).join('')}return DSON().fromJson<$className>(
-    copy, 
-    $className.new,
-    aliases: {
-      $className: {
-        ${fields.map((f) {
-    final column = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    return '\'${f.name}\':\'$column\'';
-  }).join(',\n')}
-      }
-    },
-    resolvers: [
-        (key, value) {
-          if (value is DateTime) {
-            return value.toIso8601String();
-          }
-
-          ${fields.map((f) {
-    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    return '''if (key == '$columnName' && value == null) {
-      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
-      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
-      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
-      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
-      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
-      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
-    }''';
-  }).join('\n')}
-
-          return value;
-        }
-      ]
-  );
+  return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
 }).toList();
   } on Exception catch (e) {
     throw Exception('Failed to find $tableName: \$e');
@@ -784,6 +684,7 @@ String _updateOneInSQLITE(
   String tableName,
   String className,
   Iterable<FieldElement> fields,
+  List<ConstructorElement> constructors,
 ) {
   return '''try {
 final stmt = $dialectVarName.prepare(params.query);
@@ -796,48 +697,7 @@ if (result.isEmpty) {
 
 final row = result.first;
 
-final copy = Map<String, dynamic>.from(row);${fields.map((f) {
-    final column = columnChecker.firstAnnotationOf(f);
-    final columnName = column?.getField('name')?.toStringValue() ?? f.name;
-    final columnType = column?.getField('type')?.type;
-    if (dateTimeChecker.isExactlyType(f.type) || (columnType != null && timestampChecker.isExactlyType(columnType))) {
-      return 'copy[\'$columnName\'] = DateTime.parse(copy[\'$columnName\']);\n';
-    } else {
-      return '';
-    }
-  }).join('')}return DSON().fromJson<$className>(
-    copy, 
-    $className.new,
-    aliases: {
-      $className: {
-        ${fields.map((f) {
-    final column = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    return '\'${f.name}\':\'$column\'';
-  }).join(',\n')}
-      }
-    },
-    resolvers: [
-        (key, value) {
-          if (value is DateTime) {
-            return value.toIso8601String();
-          }
-
-          ${fields.map((f) {
-    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    return '''if (key == '$columnName' && value == null) {
-      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
-      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
-      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
-      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
-      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
-      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
-    }''';
-  }).join('\n')}
-
-          return value;
-        }
-      ]
-  );
+return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
   } on Exception catch (e) {
     throw Exception('Failed to update $tableName: \$e');
   }''';
@@ -848,6 +708,7 @@ String _deleteOneInSQLITE(
   String tableName,
   String className,
   Iterable<FieldElement> fields,
+  List<ConstructorElement> constructors,
 ) {
   return '''try {
 final stmt = $dialectVarName.prepare(params.query);
@@ -860,49 +721,42 @@ if (result.isEmpty) {
 
 final row = result.first;
 
-final copy = Map<String, dynamic>.from(row);${fields.map((f) {
-    final column = columnChecker.firstAnnotationOf(f);
-    final columnName = column?.getField('name')?.toStringValue() ?? f.name;
-    final columnType = column?.getField('type')?.type;
-    if (dateTimeChecker.isExactlyType(f.type) || (columnType != null && timestampChecker.isExactlyType(columnType))) {
-      return 'copy[\'$columnName\'] = DateTime.parse(copy[\'$columnName\']);\n';
-    } else {
-      return '';
-    }
-  }).join('')}return DSON().fromJson<$className>(
-    copy, 
-    $className.new,
-    aliases: {
-      $className: {
-        ${fields.map((f) {
-    final column = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    return '\'${f.name}\':\'$column\'';
-  }).join(',\n')}
-      }
-    },
-    resolvers: [
-        (key, value) {
-          if (value is DateTime) {
-            return value.toIso8601String();
-          }
-
-          ${fields.map((f) {
-    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    return '''if (key == '$columnName' && value == null) {
-      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
-      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
-      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
-      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
-      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
-      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
-    }''';
-  }).join('\n')}
-
-          return value;
-        }
-      ]
-  );
+return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
   } on Exception catch (e) {
     throw Exception('Failed to delete $tableName: \$e');
   }''';
+}
+
+String buildObjectFromConstructor({
+  required String className,
+  required List<ConstructorElement> constructors,
+  String Function(String? value)? value,
+}) {
+  final constructor = constructors.first;
+  final constructorParams = constructor.formalParameters;
+  return '$className(${constructorParams.map((p) {
+    String buildValue() {
+      if (p.type.getDisplayString().startsWith('DateTime')) {
+        return 'DateTime.tryParse(${value?.call(p.name?.toSnakeCase()) ?? p.name?.toSnakeCase()})';
+      }
+      return '${value?.call(p.name?.toSnakeCase()) ?? p.name?.toSnakeCase()}';
+    }
+
+    String buildDefault() {
+      if (p.type.isDartCoreString) return ' ?? \'\'';
+      if (p.type.isDartCoreInt) return ' ?? 0';
+      if (p.type.isDartCoreDouble) return ' ?? 0.0';
+      if (p.type.isDartCoreBool) return ' ?? false';
+      if (p.type.isDartCoreList) return ' ?? []';
+      if (p.type.isDartCoreMap) return ' ?? {}';
+      if (p.type.isDartCoreSet) return ' ?? {}';
+      if (p.type.isDartCoreIterable) return ' ?? Iterable.empty()';
+      if (p.type.getDisplayString().startsWith('DateTime')) return ' ?? DateTime.now()';
+
+      return '';
+    }
+
+    final key = p.isNamed ? '${p.name}' : '';
+    return '$key: ${buildValue()}${buildDefault()}';
+  }).join(', ')})';
 }

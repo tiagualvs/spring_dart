@@ -7,6 +7,9 @@ resolution: workspace
 environment:
   sdk: ^3.9.0
 
+dependencies:
+  spring_dart_core:
+
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.6

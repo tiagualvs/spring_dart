@@ -153,19 +153,19 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
   const ChatsRepository(this.db);
 
   @override
-  Future<ChatEntity> insertOne(InsertOneParams<ChatEntity> params) async {
+  AsyncResult<ChatEntity> insertOne(InsertOneParams<ChatEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('fail_to_insert_on_chat');
       }
 
       final row = result.first;
 
-      return ChatEntity(
+      final entity = ChatEntity(
         id: row['id'] ?? 0,
         name: row['name'] ?? '',
         image: row['image'] ?? '',
@@ -173,25 +173,29 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to insert chats: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_insert_on_chat', s));
     }
   }
 
   @override
-  Future<ChatEntity> findOne(FindOneParams<ChatEntity> params) async {
+  AsyncResult<ChatEntity> findOne(FindOneParams<ChatEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('chat_not_found');
       }
 
       final row = result.first;
 
-      return ChatEntity(
+      final entity = ChatEntity(
         id: row['id'] ?? 0,
         name: row['name'] ?? '',
         image: row['image'] ?? '',
@@ -199,19 +203,25 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to find chats: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_insert_on_chat', s));
     }
   }
 
   @override
-  Future<List<ChatEntity>> findMany(FindManyParams<ChatEntity> params) async {
+  AsyncResult<List<ChatEntity>> findMany(
+    FindManyParams<ChatEntity> params,
+  ) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
-      return result.map((row) {
+      final entities = result.map((row) {
         return ChatEntity(
           id: row['id'] ?? 0,
           name: row['name'] ?? '',
@@ -221,25 +231,27 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
           updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
         );
       }).toList();
-    } on Exception catch (e) {
-      throw Exception('Failed to find chats: $e');
+
+      return Success(entities);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_get_chats', s));
     }
   }
 
   @override
-  Future<ChatEntity> updateOne(UpdateOneParams<ChatEntity> params) async {
+  AsyncResult<ChatEntity> updateOne(UpdateOneParams<ChatEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('chat_not_found');
       }
 
       final row = result.first;
 
-      return ChatEntity(
+      final entity = ChatEntity(
         id: row['id'] ?? 0,
         name: row['name'] ?? '',
         image: row['image'] ?? '',
@@ -247,25 +259,29 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to update chats: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_update_chat', s));
     }
   }
 
   @override
-  Future<ChatEntity> deleteOne(DeleteOneParams<ChatEntity> params) async {
+  AsyncResult<ChatEntity> deleteOne(DeleteOneParams<ChatEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('chat_not_found');
       }
 
       final row = result.first;
 
-      return ChatEntity(
+      final entity = ChatEntity(
         id: row['id'] ?? 0,
         name: row['name'] ?? '',
         image: row['image'] ?? '',
@@ -273,8 +289,12 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to delete chats: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_delete_chat', s));
     }
   }
 }
@@ -307,7 +327,7 @@ class InsertOneChatParams extends InsertOneParams<ChatEntity> {
 
   @override
   String get query =>
-      'INSERT INTO users (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
+      'INSERT INTO chats (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
 
   @override
   List<Object?> get values {
@@ -415,19 +435,21 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
   const CommentsRepository(this.db);
 
   @override
-  Future<CommentEntity> insertOne(InsertOneParams<CommentEntity> params) async {
+  AsyncResult<CommentEntity> insertOne(
+    InsertOneParams<CommentEntity> params,
+  ) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('fail_to_insert_on_comment');
       }
 
       final row = result.first;
 
-      return CommentEntity(
+      final entity = CommentEntity(
         id: row['id'] ?? 0,
         content: row['content'] ?? '',
         userId: row['user_id'] ?? 0,
@@ -435,25 +457,31 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to insert comments: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_insert_on_comment', s));
     }
   }
 
   @override
-  Future<CommentEntity> findOne(FindOneParams<CommentEntity> params) async {
+  AsyncResult<CommentEntity> findOne(
+    FindOneParams<CommentEntity> params,
+  ) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('comment_not_found');
       }
 
       final row = result.first;
 
-      return CommentEntity(
+      final entity = CommentEntity(
         id: row['id'] ?? 0,
         content: row['content'] ?? '',
         userId: row['user_id'] ?? 0,
@@ -461,13 +489,17 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to find comments: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_insert_on_comment', s));
     }
   }
 
   @override
-  Future<List<CommentEntity>> findMany(
+  AsyncResult<List<CommentEntity>> findMany(
     FindManyParams<CommentEntity> params,
   ) async {
     try {
@@ -475,7 +507,7 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
 
       final result = stmt.select(params.values);
 
-      return result.map((row) {
+      final entities = result.map((row) {
         return CommentEntity(
           id: row['id'] ?? 0,
           content: row['content'] ?? '',
@@ -485,25 +517,29 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
           updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
         );
       }).toList();
-    } on Exception catch (e) {
-      throw Exception('Failed to find comments: $e');
+
+      return Success(entities);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_get_comments', s));
     }
   }
 
   @override
-  Future<CommentEntity> updateOne(UpdateOneParams<CommentEntity> params) async {
+  AsyncResult<CommentEntity> updateOne(
+    UpdateOneParams<CommentEntity> params,
+  ) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('comment_not_found');
       }
 
       final row = result.first;
 
-      return CommentEntity(
+      final entity = CommentEntity(
         id: row['id'] ?? 0,
         content: row['content'] ?? '',
         userId: row['user_id'] ?? 0,
@@ -511,25 +547,31 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to update comments: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_update_comment', s));
     }
   }
 
   @override
-  Future<CommentEntity> deleteOne(DeleteOneParams<CommentEntity> params) async {
+  AsyncResult<CommentEntity> deleteOne(
+    DeleteOneParams<CommentEntity> params,
+  ) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('comment_not_found');
       }
 
       final row = result.first;
 
-      return CommentEntity(
+      final entity = CommentEntity(
         id: row['id'] ?? 0,
         content: row['content'] ?? '',
         userId: row['user_id'] ?? 0,
@@ -537,8 +579,12 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to delete comments: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_delete_comment', s));
     }
   }
 }
@@ -571,7 +617,7 @@ class InsertOneCommentParams extends InsertOneParams<CommentEntity> {
 
   @override
   String get query =>
-      'INSERT INTO users (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
+      'INSERT INTO comments (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
 
   @override
   List<Object?> get values {
@@ -679,7 +725,7 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
   const ParticipantsRepository(this.db);
 
   @override
-  Future<ParticipantEntity> insertOne(
+  AsyncResult<ParticipantEntity> insertOne(
     InsertOneParams<ParticipantEntity> params,
   ) async {
     try {
@@ -688,23 +734,27 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('fail_to_insert_on_participant');
       }
 
       final row = result.first;
 
-      return ParticipantEntity(
+      final entity = ParticipantEntity(
         chatId: row['chat_id'] ?? 0,
         userId: row['user_id'] ?? 0,
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to insert participants: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_insert_on_participant', s));
     }
   }
 
   @override
-  Future<ParticipantEntity> findOne(
+  AsyncResult<ParticipantEntity> findOne(
     FindOneParams<ParticipantEntity> params,
   ) async {
     try {
@@ -713,23 +763,27 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('participant_not_found');
       }
 
       final row = result.first;
 
-      return ParticipantEntity(
+      final entity = ParticipantEntity(
         chatId: row['chat_id'] ?? 0,
         userId: row['user_id'] ?? 0,
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to find participants: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_insert_on_participant', s));
     }
   }
 
   @override
-  Future<List<ParticipantEntity>> findMany(
+  AsyncResult<List<ParticipantEntity>> findMany(
     FindManyParams<ParticipantEntity> params,
   ) async {
     try {
@@ -737,20 +791,22 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
 
       final result = stmt.select(params.values);
 
-      return result.map((row) {
+      final entities = result.map((row) {
         return ParticipantEntity(
           chatId: row['chat_id'] ?? 0,
           userId: row['user_id'] ?? 0,
           createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         );
       }).toList();
-    } on Exception catch (e) {
-      throw Exception('Failed to find participants: $e');
+
+      return Success(entities);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_get_participants', s));
     }
   }
 
   @override
-  Future<ParticipantEntity> updateOne(
+  AsyncResult<ParticipantEntity> updateOne(
     UpdateOneParams<ParticipantEntity> params,
   ) async {
     try {
@@ -759,23 +815,27 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('participant_not_found');
       }
 
       final row = result.first;
 
-      return ParticipantEntity(
+      final entity = ParticipantEntity(
         chatId: row['chat_id'] ?? 0,
         userId: row['user_id'] ?? 0,
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to update participants: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_update_participant', s));
     }
   }
 
   @override
-  Future<ParticipantEntity> deleteOne(
+  AsyncResult<ParticipantEntity> deleteOne(
     DeleteOneParams<ParticipantEntity> params,
   ) async {
     try {
@@ -784,18 +844,22 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('participant_not_found');
       }
 
       final row = result.first;
 
-      return ParticipantEntity(
+      final entity = ParticipantEntity(
         chatId: row['chat_id'] ?? 0,
         userId: row['user_id'] ?? 0,
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to delete participants: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_delete_participant', s));
     }
   }
 }
@@ -819,7 +883,7 @@ class InsertOneParticipantParams extends InsertOneParams<ParticipantEntity> {
 
   @override
   String get query =>
-      'INSERT INTO users (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
+      'INSERT INTO participants (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
 
   @override
   List<Object?> get values {
@@ -915,19 +979,19 @@ class PostsRepository extends CrudRepository<PostEntity> {
   const PostsRepository(this.db);
 
   @override
-  Future<PostEntity> insertOne(InsertOneParams<PostEntity> params) async {
+  AsyncResult<PostEntity> insertOne(InsertOneParams<PostEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('fail_to_insert_on_post');
       }
 
       final row = result.first;
 
-      return PostEntity(
+      final entity = PostEntity(
         id: row['id'] ?? 0,
         title: row['title'] ?? '',
         body: row['body'] ?? '',
@@ -935,25 +999,29 @@ class PostsRepository extends CrudRepository<PostEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to insert posts: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_insert_on_post', s));
     }
   }
 
   @override
-  Future<PostEntity> findOne(FindOneParams<PostEntity> params) async {
+  AsyncResult<PostEntity> findOne(FindOneParams<PostEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('post_not_found');
       }
 
       final row = result.first;
 
-      return PostEntity(
+      final entity = PostEntity(
         id: row['id'] ?? 0,
         title: row['title'] ?? '',
         body: row['body'] ?? '',
@@ -961,19 +1029,25 @@ class PostsRepository extends CrudRepository<PostEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to find posts: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_insert_on_post', s));
     }
   }
 
   @override
-  Future<List<PostEntity>> findMany(FindManyParams<PostEntity> params) async {
+  AsyncResult<List<PostEntity>> findMany(
+    FindManyParams<PostEntity> params,
+  ) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
-      return result.map((row) {
+      final entities = result.map((row) {
         return PostEntity(
           id: row['id'] ?? 0,
           title: row['title'] ?? '',
@@ -983,25 +1057,27 @@ class PostsRepository extends CrudRepository<PostEntity> {
           updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
         );
       }).toList();
-    } on Exception catch (e) {
-      throw Exception('Failed to find posts: $e');
+
+      return Success(entities);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_get_posts', s));
     }
   }
 
   @override
-  Future<PostEntity> updateOne(UpdateOneParams<PostEntity> params) async {
+  AsyncResult<PostEntity> updateOne(UpdateOneParams<PostEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('post_not_found');
       }
 
       final row = result.first;
 
-      return PostEntity(
+      final entity = PostEntity(
         id: row['id'] ?? 0,
         title: row['title'] ?? '',
         body: row['body'] ?? '',
@@ -1009,25 +1085,29 @@ class PostsRepository extends CrudRepository<PostEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to update posts: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_update_post', s));
     }
   }
 
   @override
-  Future<PostEntity> deleteOne(DeleteOneParams<PostEntity> params) async {
+  AsyncResult<PostEntity> deleteOne(DeleteOneParams<PostEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('post_not_found');
       }
 
       final row = result.first;
 
-      return PostEntity(
+      final entity = PostEntity(
         id: row['id'] ?? 0,
         title: row['title'] ?? '',
         body: row['body'] ?? '',
@@ -1035,8 +1115,12 @@ class PostsRepository extends CrudRepository<PostEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to delete posts: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_delete_post', s));
     }
   }
 }
@@ -1069,7 +1153,7 @@ class InsertOnePostParams extends InsertOneParams<PostEntity> {
 
   @override
   String get query =>
-      'INSERT INTO users (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
+      'INSERT INTO posts (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
 
   @override
   List<Object?> get values {
@@ -1177,19 +1261,19 @@ class UsersRepository extends CrudRepository<UserEntity> {
   const UsersRepository(this.db);
 
   @override
-  Future<UserEntity> insertOne(InsertOneParams<UserEntity> params) async {
+  AsyncResult<UserEntity> insertOne(InsertOneParams<UserEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('fail_to_insert_on_user');
       }
 
       final row = result.first;
 
-      return UserEntity(
+      final entity = UserEntity(
         id: row['id'] ?? 0,
         name: row['name'] ?? '',
         username: row['username'] ?? '',
@@ -1199,25 +1283,29 @@ class UsersRepository extends CrudRepository<UserEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to insert users: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_insert_on_user', s));
     }
   }
 
   @override
-  Future<UserEntity> findOne(FindOneParams<UserEntity> params) async {
+  AsyncResult<UserEntity> findOne(FindOneParams<UserEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('user_not_found');
       }
 
       final row = result.first;
 
-      return UserEntity(
+      final entity = UserEntity(
         id: row['id'] ?? 0,
         name: row['name'] ?? '',
         username: row['username'] ?? '',
@@ -1227,19 +1315,25 @@ class UsersRepository extends CrudRepository<UserEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to find users: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_insert_on_user', s));
     }
   }
 
   @override
-  Future<List<UserEntity>> findMany(FindManyParams<UserEntity> params) async {
+  AsyncResult<List<UserEntity>> findMany(
+    FindManyParams<UserEntity> params,
+  ) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
-      return result.map((row) {
+      final entities = result.map((row) {
         return UserEntity(
           id: row['id'] ?? 0,
           name: row['name'] ?? '',
@@ -1251,25 +1345,27 @@ class UsersRepository extends CrudRepository<UserEntity> {
           updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
         );
       }).toList();
-    } on Exception catch (e) {
-      throw Exception('Failed to find users: $e');
+
+      return Success(entities);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_get_users', s));
     }
   }
 
   @override
-  Future<UserEntity> updateOne(UpdateOneParams<UserEntity> params) async {
+  AsyncResult<UserEntity> updateOne(UpdateOneParams<UserEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('user_not_found');
       }
 
       final row = result.first;
 
-      return UserEntity(
+      final entity = UserEntity(
         id: row['id'] ?? 0,
         name: row['name'] ?? '',
         username: row['username'] ?? '',
@@ -1279,25 +1375,29 @@ class UsersRepository extends CrudRepository<UserEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to update users: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_update_user', s));
     }
   }
 
   @override
-  Future<UserEntity> deleteOne(DeleteOneParams<UserEntity> params) async {
+  AsyncResult<UserEntity> deleteOne(DeleteOneParams<UserEntity> params) async {
     try {
       final stmt = db.prepare(params.query);
 
       final result = stmt.select(params.values);
 
       if (result.isEmpty) {
-        throw Exception('not_found');
+        throw NotFoundSqlException('user_not_found');
       }
 
       final row = result.first;
 
-      return UserEntity(
+      final entity = UserEntity(
         id: row['id'] ?? 0,
         name: row['name'] ?? '',
         username: row['username'] ?? '',
@@ -1307,8 +1407,12 @@ class UsersRepository extends CrudRepository<UserEntity> {
         createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
-    } on Exception catch (e) {
-      throw Exception('Failed to delete users: $e');
+
+      return Success(entity);
+    } on SqlException catch (e) {
+      return Error(e);
+    } on Exception catch (e, s) {
+      return Error(UnknownSqlException('fail_to_delete_user', s));
     }
   }
 }

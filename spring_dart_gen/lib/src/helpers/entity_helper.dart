@@ -78,11 +78,6 @@ class EntityHelper {
 
     repositories.add('injector.set<$repositoryName>(() => $repositoryName(db))');
 
-    final requiredFields = fields
-        .where((f) => generatedValueChecker.hasAnnotationOf(f) == false)
-        .where((f) => nullableChecker.hasAnnotationOf(f) == false)
-        .where((f) => defaultChecker.hasAnnotationOf(f) == false);
-
     final constraints = constraintChecker.annotationsOf(element);
 
     final primaryKeyConstraint = primaryKeyConstraintChecker
@@ -139,7 +134,7 @@ class EntityHelper {
   }
 }
 
-${insertOneParamsBuilder(driver, entityName, tableName, insertOneParamClassName, requiredFields)}
+${insertOneParamsBuilder(driver, entityName, tableName, insertOneParamClassName, fields)}
 
 ${findOneParamsBuilder(driver, entityName, tableName, findOneParamClassName, fields, primaryKey)}
 
@@ -370,25 +365,67 @@ String insertOneParamsBuilder(
   String entityName,
   String tableName,
   String className,
-  Iterable<FieldElement> requiredFields,
+  Iterable<FieldElement> fields,
 ) {
+  final classFields = fields
+      .map((f) {
+        final nullable =
+            nullableChecker.hasAnnotationOf(f) ||
+                primaryKeyChecker.hasAnnotationOf(f) ||
+                defaultChecker.hasAnnotationOf(f) ||
+                generatedValueChecker.hasAnnotationOf(f)
+            ? '?'
+            : '';
+        return 'final ${f.type.getDisplayString()}${f.type.nullabilitySuffix == NullabilitySuffix.none ? nullable : ''} ${f.name};';
+      })
+      .join('\n');
+
+  final classParams = fields
+      .map((f) {
+        final nullable =
+            nullableChecker.hasAnnotationOf(f) ||
+                primaryKeyChecker.hasAnnotationOf(f) ||
+                defaultChecker.hasAnnotationOf(f) ||
+                generatedValueChecker.hasAnnotationOf(f)
+            ? ''
+            : 'required ';
+        return '${nullable}this.${f.name},';
+      })
+      .join('\n');
+
+  final classQuery =
+      r'''INSERT INTO users (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;''';
+
+  final classValues = r'newMap.values.toList()';
+
   return '''class $className extends InsertOneParams<$entityName> {
-  ${requiredFields.map((f) => 'final ${f.type.getDisplayString()} ${f.name};').join('\n')}
+  $classFields
 
-  const $className({${requiredFields.map((f) => 'required this.${f.name},').join('\n')}});
+  const $className({$classParams});
+
+  Map<String, dynamic> _map() => <String, dynamic>{
+    ${fields.map((f) {
+    final nullable = nullableChecker.hasAnnotationOf(f) || primaryKeyChecker.hasAnnotationOf(f) || defaultChecker.hasAnnotationOf(f) || generatedValueChecker.hasAnnotationOf(f);
+    final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
+    return '${nullable ? 'if (${f.name} != null) ' : ''}\'$columnName\': ${f.name},';
+  }).join('\n')}
+  };
 
   @override
-  String get query => 'INSERT INTO $tableName (${requiredFields.map((f) {
-    final column = columnChecker.firstAnnotationOf(f);
-    final columnName = column?.getField('name')?.toStringValue() ?? '${f.name}';
-    return columnName;
-  }).join(', ')}) VALUES (${requiredFields.map((f) => '?').join(', ')}) RETURNING *;';
+  String get query => '$classQuery';
 
   @override
-  List<Object?> get values => [${requiredFields.map((f) {
-    final isDateTime = dateTimeChecker.isExactlyType(f.type);
-    return '${f.name}${isDateTime ? '.toIso8601String()' : ''}';
-  }).join(', ')}];
+  List<Object?> get values {
+    final newMap = _map();
+
+    for (final key in _map().keys) {
+      if (_map()[key] is DateTime) {
+        newMap[key] = (_map()[key] as DateTime).toIso8601String();
+      }
+    }
+
+    return $classValues;
+  }
 }''';
 }
 

@@ -280,15 +280,47 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
 }
 
 class InsertOneChatParams extends InsertOneParams<ChatEntity> {
+  final int? id;
+  final String? name;
+  final String? image;
   final String type;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
-  const InsertOneChatParams({required this.type});
+  const InsertOneChatParams({
+    this.id,
+    this.name,
+    this.image,
+    required this.type,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  Map<String, dynamic> _map() => <String, dynamic>{
+    if (id != null) 'id': id,
+    if (name != null) 'name': name,
+    if (image != null) 'image': image,
+    'type': type,
+    if (createdAt != null) 'created_at': createdAt,
+    if (updatedAt != null) 'updated_at': updatedAt,
+  };
 
   @override
-  String get query => 'INSERT INTO chats (type) VALUES (?) RETURNING *;';
+  String get query =>
+      'INSERT INTO users (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
 
   @override
-  List<Object?> get values => [type];
+  List<Object?> get values {
+    final newMap = _map();
+
+    for (final key in _map().keys) {
+      if (_map()[key] is DateTime) {
+        newMap[key] = (_map()[key] as DateTime).toIso8601String();
+      }
+    }
+
+    return newMap.values.toList();
+  }
 }
 
 class FindOneChatParams extends FindOneParams<ChatEntity> {
@@ -512,22 +544,47 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
 }
 
 class InsertOneCommentParams extends InsertOneParams<CommentEntity> {
+  final int? id;
   final String content;
   final int userId;
   final int postId;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const InsertOneCommentParams({
+    this.id,
     required this.content,
     required this.userId,
     required this.postId,
+    this.createdAt,
+    this.updatedAt,
   });
+
+  Map<String, dynamic> _map() => <String, dynamic>{
+    if (id != null) 'id': id,
+    'content': content,
+    'user_id': userId,
+    'post_id': postId,
+    if (createdAt != null) 'created_at': createdAt,
+    if (updatedAt != null) 'updated_at': updatedAt,
+  };
 
   @override
   String get query =>
-      'INSERT INTO comments (content, user_id, post_id) VALUES (?, ?, ?) RETURNING *;';
+      'INSERT INTO users (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
 
   @override
-  List<Object?> get values => [content, userId, postId];
+  List<Object?> get values {
+    final newMap = _map();
+
+    for (final key in _map().keys) {
+      if (_map()[key] is DateTime) {
+        newMap[key] = (_map()[key] as DateTime).toIso8601String();
+      }
+    }
+
+    return newMap.values.toList();
+  }
 }
 
 class FindOneCommentParams extends FindOneParams<CommentEntity> {
@@ -746,18 +803,36 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
 class InsertOneParticipantParams extends InsertOneParams<ParticipantEntity> {
   final int chatId;
   final int userId;
+  final DateTime? createdAt;
 
   const InsertOneParticipantParams({
     required this.chatId,
     required this.userId,
+    this.createdAt,
   });
+
+  Map<String, dynamic> _map() => <String, dynamic>{
+    'chat_id': chatId,
+    'user_id': userId,
+    if (createdAt != null) 'created_at': createdAt,
+  };
 
   @override
   String get query =>
-      'INSERT INTO participants (chat_id, user_id) VALUES (?, ?) RETURNING *;';
+      'INSERT INTO users (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
 
   @override
-  List<Object?> get values => [chatId, userId];
+  List<Object?> get values {
+    final newMap = _map();
+
+    for (final key in _map().keys) {
+      if (_map()[key] is DateTime) {
+        newMap[key] = (_map()[key] as DateTime).toIso8601String();
+      }
+    }
+
+    return newMap.values.toList();
+  }
 }
 
 class FindOneParticipantParams extends FindOneParams<ParticipantEntity> {
@@ -967,22 +1042,47 @@ class PostsRepository extends CrudRepository<PostEntity> {
 }
 
 class InsertOnePostParams extends InsertOneParams<PostEntity> {
+  final int? id;
   final String title;
   final String body;
   final int userId;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const InsertOnePostParams({
+    this.id,
     required this.title,
     required this.body,
     required this.userId,
+    this.createdAt,
+    this.updatedAt,
   });
+
+  Map<String, dynamic> _map() => <String, dynamic>{
+    if (id != null) 'id': id,
+    'title': title,
+    'body': body,
+    'user_id': userId,
+    if (createdAt != null) 'created_at': createdAt,
+    if (updatedAt != null) 'updated_at': updatedAt,
+  };
 
   @override
   String get query =>
-      'INSERT INTO posts (title, body, user_id) VALUES (?, ?, ?) RETURNING *;';
+      'INSERT INTO users (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
 
   @override
-  List<Object?> get values => [title, body, userId];
+  List<Object?> get values {
+    final newMap = _map();
+
+    for (final key in _map().keys) {
+      if (_map()[key] is DateTime) {
+        newMap[key] = (_map()[key] as DateTime).toIso8601String();
+      }
+    }
+
+    return newMap.values.toList();
+  }
 }
 
 class FindOnePostParams extends FindOneParams<PostEntity> {
@@ -1214,24 +1314,53 @@ class UsersRepository extends CrudRepository<UserEntity> {
 }
 
 class InsertOneUserParams extends InsertOneParams<UserEntity> {
+  final int? id;
   final String name;
   final String username;
   final String email;
   final String password;
+  final String? image;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const InsertOneUserParams({
+    this.id,
     required this.name,
     required this.username,
     required this.email,
     required this.password,
+    this.image,
+    this.createdAt,
+    this.updatedAt,
   });
+
+  Map<String, dynamic> _map() => <String, dynamic>{
+    if (id != null) 'id': id,
+    'name': name,
+    'username': username,
+    'email': email,
+    'password': password,
+    if (image != null) 'image': image,
+    if (createdAt != null) 'created_at': createdAt,
+    if (updatedAt != null) 'updated_at': updatedAt,
+  };
 
   @override
   String get query =>
-      'INSERT INTO users (name, username, email, password) VALUES (?, ?, ?, ?) RETURNING *;';
+      'INSERT INTO users (${_map().keys.map((k) => k).join(', ')}) VALUES (${_map().keys.map((_) => '?').join(', ')}) RETURNING *;';
 
   @override
-  List<Object?> get values => [name, username, email, password];
+  List<Object?> get values {
+    final newMap = _map();
+
+    for (final key in _map().keys) {
+      if (_map()[key] is DateTime) {
+        newMap[key] = (_map()[key] as DateTime).toIso8601String();
+      }
+    }
+
+    return newMap.values.toList();
+  }
 }
 
 class FindOneUserParams extends FindOneParams<UserEntity> {

@@ -366,7 +366,10 @@ String insertOneParamsBuilder(
   }).join(', ')}) VALUES (${requiredFields.map((f) => '?').join(', ')}) RETURNING *;';
 
   @override
-  List<Object?> get values => [${requiredFields.map((f) => '${f.name}').join(', ')}];
+  List<Object?> get values => [${requiredFields.map((f) {
+    final isDateTime = dateTimeChecker.isExactlyType(f.type);
+    return '${f.name}${isDateTime ? '.toIso8601String()' : ''}';
+  }).join(', ')}];
 }''';
 }
 
@@ -401,7 +404,11 @@ String findOneParamsBuilder(
   };
 
   final classValues = switch (primaryKey.isNotEmpty) {
-    true => 'return [${primaryKey.map((f) => f.name).join(', ')}];',
+    true =>
+      'return [${primaryKey.map((f) {
+        final isDateTime = dateTimeChecker.isExactlyType(f.type);
+        return '${f.name}${isDateTime ? '.toIso8601String()' : ''}';
+      }).join(', ')}];',
     false =>
       '''if (where.isEmpty) throw Exception('empty_params');
     
@@ -485,7 +492,11 @@ ${fields.where((f) => !primaryKey.contains(f)).map((f) => 'this.${f.name}').join
   };
 
   final classValues = switch (primaryKey.isNotEmpty) {
-    true => '''return [..._map().values, ${primaryKey.map((f) => f.name).join(', ')}];''',
+    true =>
+      '''return [..._map().values, ${primaryKey.map((f) {
+        final isDateTime = dateTimeChecker.isExactlyType(f.type);
+        return '${f.name}${isDateTime ? '.toIso8601String()' : ''}';
+      }).join(', ')}];''',
     false =>
       '''if (where.isEmpty) throw Exception('no_filters_given');
 
@@ -553,7 +564,11 @@ String deleteOneParamsBuilder(
   };
 
   final classValues = switch (primaryKey.isNotEmpty) {
-    true => 'return [${primaryKey.map((f) => f.name).join(', ')}];',
+    true =>
+      'return [${primaryKey.map((f) {
+        final isDateTime = dateTimeChecker.isExactlyType(f.type);
+        return '${f.name}${isDateTime ? '.toIso8601String()' : ''}';
+      }).join(', ')}];',
     false =>
       '''if (where.isEmpty) throw Exception('empty_params');
     

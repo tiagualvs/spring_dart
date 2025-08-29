@@ -165,22 +165,13 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<ChatEntity>(
-        copy,
-        ChatEntity.new,
-        aliases: {
-          ChatEntity: {
-            'id': 'id',
-            'name': 'name',
-            'image': 'image',
-            'type': 'type',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return ChatEntity(
+        id: row['id'] ?? 0,
+        name: row['name'] ?? '',
+        image: row['image'] ?? '',
+        type: row['type'] ?? '',
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to insert chats: $e');
@@ -200,22 +191,13 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<ChatEntity>(
-        copy,
-        ChatEntity.new,
-        aliases: {
-          ChatEntity: {
-            'id': 'id',
-            'name': 'name',
-            'image': 'image',
-            'type': 'type',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return ChatEntity(
+        id: row['id'] ?? 0,
+        name: row['name'] ?? '',
+        image: row['image'] ?? '',
+        type: row['type'] ?? '',
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to find chats: $e');
@@ -230,22 +212,13 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
       final result = stmt.select(params.values);
 
       return result.map((row) {
-        final copy = Map<String, dynamic>.from(row);
-        copy['created_at'] = DateTime.parse(copy['created_at']);
-        copy['updated_at'] = DateTime.parse(copy['updated_at']);
-        return DSON().fromJson<ChatEntity>(
-          copy,
-          ChatEntity.new,
-          aliases: {
-            ChatEntity: {
-              'id': 'id',
-              'name': 'name',
-              'image': 'image',
-              'type': 'type',
-              'createdAt': 'created_at',
-              'updatedAt': 'updated_at',
-            },
-          },
+        return ChatEntity(
+          id: row['id'] ?? 0,
+          name: row['name'] ?? '',
+          image: row['image'] ?? '',
+          type: row['type'] ?? '',
+          createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+          updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
         );
       }).toList();
     } on Exception catch (e) {
@@ -266,22 +239,13 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<ChatEntity>(
-        copy,
-        ChatEntity.new,
-        aliases: {
-          ChatEntity: {
-            'id': 'id',
-            'name': 'name',
-            'image': 'image',
-            'type': 'type',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return ChatEntity(
+        id: row['id'] ?? 0,
+        name: row['name'] ?? '',
+        image: row['image'] ?? '',
+        type: row['type'] ?? '',
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to update chats: $e');
@@ -301,22 +265,13 @@ class ChatsRepository extends CrudRepository<ChatEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<ChatEntity>(
-        copy,
-        ChatEntity.new,
-        aliases: {
-          ChatEntity: {
-            'id': 'id',
-            'name': 'name',
-            'image': 'image',
-            'type': 'type',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return ChatEntity(
+        id: row['id'] ?? 0,
+        name: row['name'] ?? '',
+        image: row['image'] ?? '',
+        type: row['type'] ?? '',
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to delete chats: $e');
@@ -440,22 +395,13 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<CommentEntity>(
-        copy,
-        CommentEntity.new,
-        aliases: {
-          CommentEntity: {
-            'id': 'id',
-            'content': 'content',
-            'userId': 'user_id',
-            'postId': 'post_id',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return CommentEntity(
+        id: row['id'] ?? 0,
+        content: row['content'] ?? '',
+        userId: row['user_id'] ?? 0,
+        postId: row['post_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to insert comments: $e');
@@ -475,22 +421,13 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<CommentEntity>(
-        copy,
-        CommentEntity.new,
-        aliases: {
-          CommentEntity: {
-            'id': 'id',
-            'content': 'content',
-            'userId': 'user_id',
-            'postId': 'post_id',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return CommentEntity(
+        id: row['id'] ?? 0,
+        content: row['content'] ?? '',
+        userId: row['user_id'] ?? 0,
+        postId: row['post_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to find comments: $e');
@@ -507,22 +444,13 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
       final result = stmt.select(params.values);
 
       return result.map((row) {
-        final copy = Map<String, dynamic>.from(row);
-        copy['created_at'] = DateTime.parse(copy['created_at']);
-        copy['updated_at'] = DateTime.parse(copy['updated_at']);
-        return DSON().fromJson<CommentEntity>(
-          copy,
-          CommentEntity.new,
-          aliases: {
-            CommentEntity: {
-              'id': 'id',
-              'content': 'content',
-              'userId': 'user_id',
-              'postId': 'post_id',
-              'createdAt': 'created_at',
-              'updatedAt': 'updated_at',
-            },
-          },
+        return CommentEntity(
+          id: row['id'] ?? 0,
+          content: row['content'] ?? '',
+          userId: row['user_id'] ?? 0,
+          postId: row['post_id'] ?? 0,
+          createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+          updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
         );
       }).toList();
     } on Exception catch (e) {
@@ -543,22 +471,13 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<CommentEntity>(
-        copy,
-        CommentEntity.new,
-        aliases: {
-          CommentEntity: {
-            'id': 'id',
-            'content': 'content',
-            'userId': 'user_id',
-            'postId': 'post_id',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return CommentEntity(
+        id: row['id'] ?? 0,
+        content: row['content'] ?? '',
+        userId: row['user_id'] ?? 0,
+        postId: row['post_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to update comments: $e');
@@ -578,22 +497,13 @@ class CommentsRepository extends CrudRepository<CommentEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<CommentEntity>(
-        copy,
-        CommentEntity.new,
-        aliases: {
-          CommentEntity: {
-            'id': 'id',
-            'content': 'content',
-            'userId': 'user_id',
-            'postId': 'post_id',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return CommentEntity(
+        id: row['id'] ?? 0,
+        content: row['content'] ?? '',
+        userId: row['user_id'] ?? 0,
+        postId: row['post_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to delete comments: $e');
@@ -726,18 +636,10 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      return DSON().fromJson<ParticipantEntity>(
-        copy,
-        ParticipantEntity.new,
-        aliases: {
-          ParticipantEntity: {
-            'chatId': 'chat_id',
-            'userId': 'user_id',
-            'createdAt': 'created_at',
-          },
-        },
+      return ParticipantEntity(
+        chatId: row['chat_id'] ?? 0,
+        userId: row['user_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to insert participants: $e');
@@ -759,18 +661,10 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      return DSON().fromJson<ParticipantEntity>(
-        copy,
-        ParticipantEntity.new,
-        aliases: {
-          ParticipantEntity: {
-            'chatId': 'chat_id',
-            'userId': 'user_id',
-            'createdAt': 'created_at',
-          },
-        },
+      return ParticipantEntity(
+        chatId: row['chat_id'] ?? 0,
+        userId: row['user_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to find participants: $e');
@@ -787,18 +681,10 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
       final result = stmt.select(params.values);
 
       return result.map((row) {
-        final copy = Map<String, dynamic>.from(row);
-        copy['created_at'] = DateTime.parse(copy['created_at']);
-        return DSON().fromJson<ParticipantEntity>(
-          copy,
-          ParticipantEntity.new,
-          aliases: {
-            ParticipantEntity: {
-              'chatId': 'chat_id',
-              'userId': 'user_id',
-              'createdAt': 'created_at',
-            },
-          },
+        return ParticipantEntity(
+          chatId: row['chat_id'] ?? 0,
+          userId: row['user_id'] ?? 0,
+          createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
         );
       }).toList();
     } on Exception catch (e) {
@@ -821,18 +707,10 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      return DSON().fromJson<ParticipantEntity>(
-        copy,
-        ParticipantEntity.new,
-        aliases: {
-          ParticipantEntity: {
-            'chatId': 'chat_id',
-            'userId': 'user_id',
-            'createdAt': 'created_at',
-          },
-        },
+      return ParticipantEntity(
+        chatId: row['chat_id'] ?? 0,
+        userId: row['user_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to update participants: $e');
@@ -854,18 +732,10 @@ class ParticipantsRepository extends CrudRepository<ParticipantEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      return DSON().fromJson<ParticipantEntity>(
-        copy,
-        ParticipantEntity.new,
-        aliases: {
-          ParticipantEntity: {
-            'chatId': 'chat_id',
-            'userId': 'user_id',
-            'createdAt': 'created_at',
-          },
-        },
+      return ParticipantEntity(
+        chatId: row['chat_id'] ?? 0,
+        userId: row['user_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to delete participants: $e');
@@ -982,22 +852,13 @@ class PostsRepository extends CrudRepository<PostEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<PostEntity>(
-        copy,
-        PostEntity.new,
-        aliases: {
-          PostEntity: {
-            'id': 'id',
-            'title': 'title',
-            'body': 'body',
-            'userId': 'user_id',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return PostEntity(
+        id: row['id'] ?? 0,
+        title: row['title'] ?? '',
+        body: row['body'] ?? '',
+        userId: row['user_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to insert posts: $e');
@@ -1017,22 +878,13 @@ class PostsRepository extends CrudRepository<PostEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<PostEntity>(
-        copy,
-        PostEntity.new,
-        aliases: {
-          PostEntity: {
-            'id': 'id',
-            'title': 'title',
-            'body': 'body',
-            'userId': 'user_id',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return PostEntity(
+        id: row['id'] ?? 0,
+        title: row['title'] ?? '',
+        body: row['body'] ?? '',
+        userId: row['user_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to find posts: $e');
@@ -1047,22 +899,13 @@ class PostsRepository extends CrudRepository<PostEntity> {
       final result = stmt.select(params.values);
 
       return result.map((row) {
-        final copy = Map<String, dynamic>.from(row);
-        copy['created_at'] = DateTime.parse(copy['created_at']);
-        copy['updated_at'] = DateTime.parse(copy['updated_at']);
-        return DSON().fromJson<PostEntity>(
-          copy,
-          PostEntity.new,
-          aliases: {
-            PostEntity: {
-              'id': 'id',
-              'title': 'title',
-              'body': 'body',
-              'userId': 'user_id',
-              'createdAt': 'created_at',
-              'updatedAt': 'updated_at',
-            },
-          },
+        return PostEntity(
+          id: row['id'] ?? 0,
+          title: row['title'] ?? '',
+          body: row['body'] ?? '',
+          userId: row['user_id'] ?? 0,
+          createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+          updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
         );
       }).toList();
     } on Exception catch (e) {
@@ -1083,22 +926,13 @@ class PostsRepository extends CrudRepository<PostEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<PostEntity>(
-        copy,
-        PostEntity.new,
-        aliases: {
-          PostEntity: {
-            'id': 'id',
-            'title': 'title',
-            'body': 'body',
-            'userId': 'user_id',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return PostEntity(
+        id: row['id'] ?? 0,
+        title: row['title'] ?? '',
+        body: row['body'] ?? '',
+        userId: row['user_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to update posts: $e');
@@ -1118,22 +952,13 @@ class PostsRepository extends CrudRepository<PostEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<PostEntity>(
-        copy,
-        PostEntity.new,
-        aliases: {
-          PostEntity: {
-            'id': 'id',
-            'title': 'title',
-            'body': 'body',
-            'userId': 'user_id',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return PostEntity(
+        id: row['id'] ?? 0,
+        title: row['title'] ?? '',
+        body: row['body'] ?? '',
+        userId: row['user_id'] ?? 0,
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to delete posts: $e');
@@ -1264,24 +1089,15 @@ class UsersRepository extends CrudRepository<UserEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<UserEntity>(
-        copy,
-        UserEntity.new,
-        aliases: {
-          UserEntity: {
-            'id': 'id',
-            'name': 'name',
-            'username': 'username',
-            'email': 'email',
-            'password': 'password',
-            'image': 'image',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return UserEntity(
+        id: row['id'] ?? 0,
+        name: row['name'] ?? '',
+        username: row['username'] ?? '',
+        email: row['email'] ?? '',
+        password: row['password'] ?? '',
+        image: row['image'] ?? '',
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to insert users: $e');
@@ -1301,24 +1117,15 @@ class UsersRepository extends CrudRepository<UserEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<UserEntity>(
-        copy,
-        UserEntity.new,
-        aliases: {
-          UserEntity: {
-            'id': 'id',
-            'name': 'name',
-            'username': 'username',
-            'email': 'email',
-            'password': 'password',
-            'image': 'image',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return UserEntity(
+        id: row['id'] ?? 0,
+        name: row['name'] ?? '',
+        username: row['username'] ?? '',
+        email: row['email'] ?? '',
+        password: row['password'] ?? '',
+        image: row['image'] ?? '',
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to find users: $e');
@@ -1333,24 +1140,15 @@ class UsersRepository extends CrudRepository<UserEntity> {
       final result = stmt.select(params.values);
 
       return result.map((row) {
-        final copy = Map<String, dynamic>.from(row);
-        copy['created_at'] = DateTime.parse(copy['created_at']);
-        copy['updated_at'] = DateTime.parse(copy['updated_at']);
-        return DSON().fromJson<UserEntity>(
-          copy,
-          UserEntity.new,
-          aliases: {
-            UserEntity: {
-              'id': 'id',
-              'name': 'name',
-              'username': 'username',
-              'email': 'email',
-              'password': 'password',
-              'image': 'image',
-              'createdAt': 'created_at',
-              'updatedAt': 'updated_at',
-            },
-          },
+        return UserEntity(
+          id: row['id'] ?? 0,
+          name: row['name'] ?? '',
+          username: row['username'] ?? '',
+          email: row['email'] ?? '',
+          password: row['password'] ?? '',
+          image: row['image'] ?? '',
+          createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+          updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
         );
       }).toList();
     } on Exception catch (e) {
@@ -1371,24 +1169,15 @@ class UsersRepository extends CrudRepository<UserEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<UserEntity>(
-        copy,
-        UserEntity.new,
-        aliases: {
-          UserEntity: {
-            'id': 'id',
-            'name': 'name',
-            'username': 'username',
-            'email': 'email',
-            'password': 'password',
-            'image': 'image',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return UserEntity(
+        id: row['id'] ?? 0,
+        name: row['name'] ?? '',
+        username: row['username'] ?? '',
+        email: row['email'] ?? '',
+        password: row['password'] ?? '',
+        image: row['image'] ?? '',
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to update users: $e');
@@ -1408,24 +1197,15 @@ class UsersRepository extends CrudRepository<UserEntity> {
 
       final row = result.first;
 
-      final copy = Map<String, dynamic>.from(row);
-      copy['created_at'] = DateTime.parse(copy['created_at']);
-      copy['updated_at'] = DateTime.parse(copy['updated_at']);
-      return DSON().fromJson<UserEntity>(
-        copy,
-        UserEntity.new,
-        aliases: {
-          UserEntity: {
-            'id': 'id',
-            'name': 'name',
-            'username': 'username',
-            'email': 'email',
-            'password': 'password',
-            'image': 'image',
-            'createdAt': 'created_at',
-            'updatedAt': 'updated_at',
-          },
-        },
+      return UserEntity(
+        id: row['id'] ?? 0,
+        name: row['name'] ?? '',
+        username: row['username'] ?? '',
+        email: row['email'] ?? '',
+        password: row['password'] ?? '',
+        image: row['image'] ?? '',
+        createdAt: DateTime.tryParse(row['created_at']) ?? DateTime.now(),
+        updatedAt: DateTime.tryParse(row['updated_at']) ?? DateTime.now(),
       );
     } on Exception catch (e) {
       throw Exception('Failed to delete users: $e');

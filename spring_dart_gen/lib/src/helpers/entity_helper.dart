@@ -109,27 +109,27 @@ class EntityHelper {
   const $repositoryName(this.${driver.varName});
   
   @override
-  Future<$entityName> insertOne(InsertOneParams<$entityName> params) async {
+  AsyncResult<$entityName> insertOne(InsertOneParams<$entityName> params) async {
     ${insertOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
   }
 
   @override
-  Future<$entityName> findOne(FindOneParams<$entityName> params) async {
+  AsyncResult<$entityName> findOne(FindOneParams<$entityName> params) async {
     ${findOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
   }
 
   @override
-  Future<List<$entityName>> findMany(FindManyParams<$entityName> params) async {
+  AsyncResult<List<$entityName>> findMany(FindManyParams<$entityName> params) async {
     ${findManyMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
   }
 
   @override
-  Future<$entityName> updateOne(UpdateOneParams<$entityName> params) async {
+  AsyncResult<$entityName> updateOne(UpdateOneParams<$entityName> params) async {
     ${updateOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
   }
 
   @override
-  Future<$entityName> deleteOne(DeleteOneParams<$entityName> params) async {
+  AsyncResult<$entityName> deleteOne(DeleteOneParams<$entityName> params) async {
     ${deleteOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
   }
 }
@@ -660,14 +660,18 @@ String _insertOneInSQLITE(
   final result = stmt.select(params.values);
 
   if (result.isEmpty) {
-    throw Exception('not_found');
+    throw NotFoundSqlException('fail_to_insert_on_${singularize(tableName)}');
   }
 
   final row = result.first;
 
-  return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
-} on Exception catch (e) {
-  throw Exception('Failed to insert $tableName: \$e');
+  final entity = ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
+
+  return Success(entity);
+} on SqlException catch (e) {
+  return Error(e);
+} on Exception catch (e, s) {
+  return Error(UnknownSqlException('fail_to_insert_on_${singularize(tableName)}', s));
 }''';
 }
 
@@ -679,21 +683,24 @@ String _findOneInSQLITE(
   List<ConstructorElement> constructors,
 ) {
   return '''try {
-final stmt = $dialectVarName.prepare(params.query);
+  final stmt = $dialectVarName.prepare(params.query);
 
-final result = stmt.select(params.values);
+  final result = stmt.select(params.values);
 
-if (result.isEmpty) {
-  throw Exception('not_found');
-}
+  if (result.isEmpty) {
+    throw NotFoundSqlException('${singularize(tableName)}_not_found');
+  }
 
-final row = result.first;
+  final row = result.first;
 
-  return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
+  final entity = ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
 
-  } on Exception catch (e) {
-    throw Exception('Failed to find $tableName: \$e');
-  }''';
+  return Success(entity);
+} on SqlException catch (e) {
+  return Error(e);
+} on Exception catch (e, s) {
+  return Error(UnknownSqlException('fail_to_insert_on_${singularize(tableName)}', s));
+}''';
 }
 
 String _findManyInSQLITE(
@@ -704,16 +711,18 @@ String _findManyInSQLITE(
   List<ConstructorElement> constructors,
 ) {
   return '''try {
-final stmt = $dialectVarName.prepare(params.query);
+  final stmt = $dialectVarName.prepare(params.query);
 
-final result = stmt.select(params.values);
+  final result = stmt.select(params.values);
 
-return result.map((row) {
-  return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
-}).toList();
-  } on Exception catch (e) {
-    throw Exception('Failed to find $tableName: \$e');
-  }''';
+  final entities = result.map((row) {
+    return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
+  }).toList();
+
+  return Success(entities);
+} on Exception catch (e, s) {
+  return Error(UnknownSqlException('fail_to_get_$tableName', s));
+}''';
 }
 
 String _updateOneInSQLITE(
@@ -724,20 +733,24 @@ String _updateOneInSQLITE(
   List<ConstructorElement> constructors,
 ) {
   return '''try {
-final stmt = $dialectVarName.prepare(params.query);
+  final stmt = $dialectVarName.prepare(params.query);
 
-final result = stmt.select(params.values);
+  final result = stmt.select(params.values);
 
-if (result.isEmpty) {
-  throw Exception('not_found');
-}
+  if (result.isEmpty) {
+    throw NotFoundSqlException('${singularize(tableName)}_not_found');
+  }
 
-final row = result.first;
+  final row = result.first;
 
-return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
-  } on Exception catch (e) {
-    throw Exception('Failed to update $tableName: \$e');
-  }''';
+  final entity =  ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
+
+  return Success(entity);
+} on SqlException catch (e) {
+  return Error(e);
+} on Exception catch (e, s) {
+  return Error(UnknownSqlException('fail_to_update_${singularize(tableName)}', s));
+}''';
 }
 
 String _deleteOneInSQLITE(
@@ -748,20 +761,24 @@ String _deleteOneInSQLITE(
   List<ConstructorElement> constructors,
 ) {
   return '''try {
-final stmt = $dialectVarName.prepare(params.query);
+  final stmt = $dialectVarName.prepare(params.query);
 
-final result = stmt.select(params.values);
+  final result = stmt.select(params.values);
 
-if (result.isEmpty) {
-  throw Exception('not_found');
-}
+  if (result.isEmpty) {
+    throw NotFoundSqlException('${singularize(tableName)}_not_found');
+  }
 
-final row = result.first;
+  final row = result.first;
 
-return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
-  } on Exception catch (e) {
-    throw Exception('Failed to delete $tableName: \$e');
-  }''';
+  final entity = ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
+  
+  return Success(entity);
+} on SqlException catch (e) {
+  return Error(e);
+} on Exception catch (e, s) {
+  return Error(UnknownSqlException('fail_to_delete_${singularize(tableName)}', s));
+}''';
 }
 
 String buildObjectFromConstructor({

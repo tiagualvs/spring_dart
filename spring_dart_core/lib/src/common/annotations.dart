@@ -91,6 +91,12 @@ class Body {
   const Body([this.contentType = const ContentType.applicationJson()]);
 }
 
+const applicationJson = Body(ContentType.applicationJson());
+const formUrlEncoded = Body(ContentType.formUrlEncoded());
+const formData = Body(ContentType.multipartFormData());
+const textPlain = Body(ContentType.textPlain());
+const textHtml = Body(ContentType.textHtml());
+
 /// `@Param`
 class Param {
   final String name;

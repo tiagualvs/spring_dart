@@ -1,6 +1,8 @@
 import 'package:example/server.dart';
 import 'package:example/src/entities/credentials_entity.dart';
+import 'package:example/src/exceptions.dart';
 import 'package:spring_dart/spring_dart.dart';
+import 'package:spring_dart_sql/spring_dart_sql.dart';
 
 import '../dtos/sign_in_dto.dart';
 import '../dtos/sign_up_dto.dart';
@@ -15,12 +17,15 @@ class AuthController {
   @Post('/sign-up')
   Future<Response> signUp(@Body() SignUpDto dto) async {
     final result = await authService.signUp(dto);
+
     return result.fold(
       (user) {
         return Json.created(body: user);
       },
       (error) {
-        return error.toResponse();
+        if (error is SqlException) return error.toResponse();
+        if (error is ServerException) return error.toResponse();
+        throw error;
       },
     );
   }
@@ -38,7 +43,9 @@ class AuthController {
         return Json.ok(body: {'user': user, 'credentials': credentials});
       },
       (error) {
-        return error.toResponse();
+        if (error is SqlException) return error.toResponse();
+        if (error is ServerException) return error.toResponse();
+        throw error;
       },
     );
   }
@@ -54,12 +61,21 @@ class AuthController {
     final payload = authService.jwtService.verify(body['refresh_token']);
     final id = int.tryParse(payload['sub'] ?? '');
     if (id == null) return Json.unauthorized();
-    final user = await authService.usersRepository.findOne(FindOneUserParams(id));
-    final credentials = CredentialsEntity(
-      accessToken: authService.jwtService.sign(user.id.toString(), expiresIn: Duration(hours: 1)),
-      refreshToken: authService.jwtService.sign(user.id.toString(), expiresIn: Duration(days: 7)),
-      expiresIn: 3600,
+    final result = await authService.usersRepository.findOne(FindOneUserParams(id));
+    return result.fold(
+      (user) {
+        final credentials = CredentialsEntity(
+          accessToken: authService.jwtService.sign(user.id.toString(), expiresIn: Duration(hours: 1)),
+          refreshToken: authService.jwtService.sign(user.id.toString(), expiresIn: Duration(days: 7)),
+          expiresIn: 3600,
+        );
+        return Json.ok(body: credentials);
+      },
+      (error) {
+        if (error is SqlException) return error.toResponse();
+        if (error is ServerException) return error.toResponse();
+        throw error;
+      },
     );
-    return Json.ok(body: credentials);
   }
 }

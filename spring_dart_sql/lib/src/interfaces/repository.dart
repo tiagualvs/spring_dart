@@ -1,3 +1,5 @@
+import 'package:spring_dart_core/spring_dart_core.dart';
+
 import '../common/page.dart';
 
 abstract class SpringRepository<T> {
@@ -6,11 +8,11 @@ abstract class SpringRepository<T> {
 
 abstract class CrudRepository<T> extends SpringRepository<T> {
   const CrudRepository();
-  Future<T> insertOne(InsertOneParams<T> params);
-  Future<T> findOne(FindOneParams<T> params);
-  Future<List<T>> findMany(FindManyParams<T> params);
-  Future<T> updateOne(UpdateOneParams<T> params);
-  Future<T> deleteOne(DeleteOneParams<T> params);
+  AsyncResult<T> insertOne(InsertOneParams<T> params);
+  AsyncResult<T> findOne(FindOneParams<T> params);
+  AsyncResult<List<T>> findMany(FindManyParams<T> params);
+  AsyncResult<T> updateOne(UpdateOneParams<T> params);
+  AsyncResult<T> deleteOne(DeleteOneParams<T> params);
 }
 
 abstract class InsertOneParams<T> {
@@ -54,7 +56,7 @@ abstract class DeleteOneParams<T> {
 }
 
 abstract class PagingRepository<T> extends SpringRepository<T> {
-  Future<Page<T>> findManyPaginated(FindManyPaginagedParams<T> params);
+  AsyncResult<Page<T>> findManyPaginated(FindManyPaginagedParams<T> params);
 }
 
 abstract class FindManyPaginagedParams<T> {

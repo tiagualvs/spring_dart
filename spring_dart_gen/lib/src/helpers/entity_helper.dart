@@ -636,26 +636,17 @@ String _insertOneInSQLITE(
 
           ${fields.map((f) {
     final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    final buffer = StringBuffer();
-    if (f.type.isDartCoreString) {
-      buffer.write('return value ?? \'\';');
-    } else if (f.type.isDartCoreNum) {
-      buffer.write('return value ?? 0;');
-    } else if (f.type.isDartCoreBool) {
-      buffer.write('return value ?? false;');
-    } else if (f.type.isDartCoreMap) {
-      buffer.write('return value ?? {};');
-    } else if (f.type.isDartCoreSet) {
-      buffer.write('return value ?? {};');
-    } else if (f.type.isDartCoreList) {
-      buffer.write('return value ?? [];');
-    }
     return '''if (key == '$columnName' && value == null) {
-      ${buffer.toString()}
+      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
+      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
+      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
+      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
     }''';
-  }).join('\n')}else {
-    return value;
-  }
+  }).join('\n')}
+
+          return value;
         }
       ]
     );
@@ -709,26 +700,17 @@ final copy = Map<String, dynamic>.from(row);${fields.map((f) {
 
           ${fields.map((f) {
     final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    final buffer = StringBuffer();
-    if (f.type.isDartCoreString) {
-      buffer.write('return value ?? \'\';');
-    } else if (f.type.isDartCoreNum) {
-      buffer.write('return value ?? 0;');
-    } else if (f.type.isDartCoreBool) {
-      buffer.write('return value ?? false;');
-    } else if (f.type.isDartCoreMap) {
-      buffer.write('return value ?? {};');
-    } else if (f.type.isDartCoreSet) {
-      buffer.write('return value ?? {};');
-    } else if (f.type.isDartCoreList) {
-      buffer.write('return value ?? [];');
-    }
     return '''if (key == '$columnName' && value == null) {
-      ${buffer.toString()}
+      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
+      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
+      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
+      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
     }''';
-  }).join('\n')}else {
-    return value;
-  }
+  }).join('\n')}
+
+          return value;
         }
       ]
   );
@@ -777,26 +759,17 @@ return result.map((row) {
 
           ${fields.map((f) {
     final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    final buffer = StringBuffer();
-    if (f.type.isDartCoreString) {
-      buffer.write('return value ?? \'\';');
-    } else if (f.type.isDartCoreNum) {
-      buffer.write('return value ?? 0;');
-    } else if (f.type.isDartCoreBool) {
-      buffer.write('return value ?? false;');
-    } else if (f.type.isDartCoreMap) {
-      buffer.write('return value ?? {};');
-    } else if (f.type.isDartCoreSet) {
-      buffer.write('return value ?? {};');
-    } else if (f.type.isDartCoreList) {
-      buffer.write('return value ?? [];');
-    }
     return '''if (key == '$columnName' && value == null) {
-      ${buffer.toString()}
+      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
+      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
+      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
+      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
     }''';
-  }).join('\n')}else {
-    return value;
-  }
+  }).join('\n')}
+
+          return value;
         }
       ]
   );
@@ -851,26 +824,17 @@ final copy = Map<String, dynamic>.from(row);${fields.map((f) {
 
           ${fields.map((f) {
     final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    final buffer = StringBuffer();
-    if (f.type.isDartCoreString) {
-      buffer.write('return value ?? \'\';');
-    } else if (f.type.isDartCoreNum) {
-      buffer.write('return value ?? 0;');
-    } else if (f.type.isDartCoreBool) {
-      buffer.write('return value ?? false;');
-    } else if (f.type.isDartCoreMap) {
-      buffer.write('return value ?? {};');
-    } else if (f.type.isDartCoreSet) {
-      buffer.write('return value ?? {};');
-    } else if (f.type.isDartCoreList) {
-      buffer.write('return value ?? [];');
-    }
     return '''if (key == '$columnName' && value == null) {
-      ${buffer.toString()}
+      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
+      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
+      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
+      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
     }''';
-  }).join('\n')}else {
-    return value;
-  }
+  }).join('\n')}
+
+          return value;
         }
       ]
   );
@@ -924,26 +888,17 @@ final copy = Map<String, dynamic>.from(row);${fields.map((f) {
 
           ${fields.map((f) {
     final columnName = columnChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? f.name;
-    final buffer = StringBuffer();
-    if (f.type.isDartCoreString) {
-      buffer.write('return value ?? \'\';');
-    } else if (f.type.isDartCoreNum) {
-      buffer.write('return value ?? 0;');
-    } else if (f.type.isDartCoreBool) {
-      buffer.write('return value ?? false;');
-    } else if (f.type.isDartCoreMap) {
-      buffer.write('return value ?? {};');
-    } else if (f.type.isDartCoreSet) {
-      buffer.write('return value ?? {};');
-    } else if (f.type.isDartCoreList) {
-      buffer.write('return value ?? [];');
-    }
     return '''if (key == '$columnName' && value == null) {
-      ${buffer.toString()}
+      ${f.type.isDartCoreString ? 'return value ?? \'\';' : 'return null;'}
+      ${f.type.isDartCoreNum ? 'return value ?? 0;' : 'return null;'}
+      ${f.type.isDartCoreBool ? 'return value ?? false;' : 'return null;'}
+      ${f.type.isDartCoreMap ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreSet ? 'return value ?? {};' : 'return null;'}
+      ${f.type.isDartCoreList ? 'return value ?? [];' : 'return null;'}
     }''';
-  }).join('\n')}else {
-    return value;
-  }
+  }).join('\n')}
+
+          return value;
         }
       ]
   );

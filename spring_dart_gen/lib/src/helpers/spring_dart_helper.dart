@@ -30,8 +30,6 @@ class SpringDartHelper {
   String content() {
     imports.add('package:spring_dart/spring_dart.dart');
 
-    imports.add('dart:convert');
-
     final importsSorted = _importsNormalized(imports);
 
     if (springDartConfigurations.length > 1) {

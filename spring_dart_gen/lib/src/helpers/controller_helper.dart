@@ -128,6 +128,8 @@ class ControllerHelper {
         // Body
         final bodies = method.formalParameters.where((e) => bodyChecker.hasAnnotationOf(e)).toList();
 
+        if (bodies.isNotEmpty) imports.add('dart:convert');
+
         final everyDtoHasAnnotation = switch (contentType is ApplicationJson && bodies.isNotEmpty) {
           true => bodies.any(
             (d) {

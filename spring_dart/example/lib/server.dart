@@ -4,11 +4,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
+
 import 'package:example/src/config/beans/password_bean.dart';
 import 'package:example/src/config/security_configuration.dart';
 import 'package:example/src/config/server_configuration.dart';
 import 'package:example/src/controllers/auth_controller.dart';
 import 'package:example/src/controllers/users_controller.dart';
+import 'package:example/src/dtos/insert_one_user_dto.dart';
 import 'package:example/src/dtos/sign_in_dto.dart';
 import 'package:example/src/dtos/sign_up_dto.dart';
 import 'package:example/src/entities/chat_entity.dart';
@@ -80,16 +82,21 @@ class _$AuthController extends AuthController {
     router.post('/sign-up', (Request request) async {
       final $json = await request.readAsString();
       final $body = Map<String, dynamic>.from(json.decode($json));
-      final $dson = DSON();
-      final dto = $dson.fromJson<SignUpDto>($body, SignUpDto.new);
+      final dto = SignUpDto(
+        name: $body['name'] ?? '',
+        email: $body['email'] ?? '',
+        password: $body['password'] ?? '',
+      );
       return signUp(dto);
     });
 
     router.post('/sign-in', (Request request) async {
       final $json = await request.readAsString();
       final $body = Map<String, dynamic>.from(json.decode($json));
-      final $dson = DSON();
-      final dto = $dson.fromJson<SignInDto>($body, SignInDto.new);
+      final dto = SignInDto(
+        email: $body['email'] ?? '',
+        password: $body['password'] ?? '',
+      );
       return signIn(dto);
     });
 
@@ -130,7 +137,16 @@ class _$UsersController extends UsersController {
     });
 
     router.post('/', (Request request) async {
-      return post();
+      final $json = await request.readAsString();
+      final $body = Map<String, dynamic>.from(json.decode($json));
+      final dto = InsertOneUserDto(
+        name: $body['name'] ?? '',
+        email: $body['email'] ?? '',
+        password: $body['password'] ?? '',
+        createdAt:
+            DateTimeParser().decode($body['created_at']) ?? DateTime.now(),
+      );
+      return insertOne(dto);
     });
 
     router.get('/<id>', (Request request, String id) async {

@@ -44,15 +44,7 @@ class ConfigurationHelper {
         if (returnType.isDartAsyncFuture || returnType.isDartAsyncFutureOr) {
           final realReturnType = (returnType as ParameterizedType).typeArguments.first;
 
-          final uri = realReturnType.element?.library?.uri;
-
-          if (uri != null && uri.scheme == 'package') {
-            final package = uri.pathSegments.first;
-
-            imports.add('package:$package/$package.dart');
-          } else {
-            imports.add(uri?.toString() ?? '');
-          }
+          imports.add(realReturnType.element?.library?.uri.toString() ?? '');
 
           beans.add(
             (

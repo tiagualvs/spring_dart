@@ -1,5 +1,3 @@
-import 'content_type.dart';
-
 /// `@Controller`
 class Controller {
   final String path;
@@ -85,17 +83,41 @@ class Connect {
   const Connect([this.path = '/']);
 }
 
-/// `@Body`
-class Body {
-  final ContentType contentType;
-  const Body([this.contentType = const ContentType.applicationJson()]);
+/// `@ContentType`
+class ContentType {
+  final String value;
+  const ContentType(this.value);
 }
 
-const applicationJson = Body(ContentType.applicationJson());
-const formUrlEncoded = Body(ContentType.formUrlEncoded());
-const formData = Body(ContentType.multipartFormData());
-const textPlain = Body(ContentType.textPlain());
-const textHtml = Body(ContentType.textHtml());
+/// `@ApplicationJson`
+class ApplicationJson extends ContentType {
+  const ApplicationJson() : super('application/json');
+}
+
+/// `@FormUrlEncoded`
+class FormUrlEncoded extends ContentType {
+  const FormUrlEncoded() : super('application/x-www-form-urlencoded');
+}
+
+/// `@MultipartFormData`
+class MultipartFormData extends ContentType {
+  const MultipartFormData() : super('multipart/form-data');
+}
+
+/// `@TextPlain`
+class TextPlain extends ContentType {
+  const TextPlain() : super('text/plain');
+}
+
+/// `@TextHtml`
+class TextHtml extends ContentType {
+  const TextHtml() : super('text/html');
+}
+
+/// `@Body`
+class Body {
+  const Body();
+}
 
 /// `@Param`
 class Param {

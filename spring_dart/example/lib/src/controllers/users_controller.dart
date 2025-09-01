@@ -1,4 +1,5 @@
 import 'package:example/server.dart';
+import 'package:example/src/dtos/insert_one_user_dto.dart';
 import 'package:spring_dart/spring_dart.dart';
 
 @Controller('/users')
@@ -8,7 +9,8 @@ class UsersController {
   UsersController(this.repository);
 
   @Post('/upload')
-  Future<Response> upload(@Body(ContentType.multipartFormData()) List<FormData> fields) async {
+  @MultipartFormData()
+  Future<Response> upload(@Body() List<FormData> fields) async {
     return Json.noContent();
   }
 
@@ -18,7 +20,7 @@ class UsersController {
   }
 
   @Post('/')
-  Future<Response> post() async {
+  Future<Response> insertOne(@Body() InsertOneUserDto dto) async {
     return Json.ok();
   }
 

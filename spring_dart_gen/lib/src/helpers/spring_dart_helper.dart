@@ -1,6 +1,7 @@
 import 'package:spring_dart_sql/spring_dart_sql.dart';
 
 class SpringDartHelper {
+  final String package;
   final Driver driver;
   final Set<String> imports;
   final Set<({String name, String className, String content})> springDartConfigurations;
@@ -13,6 +14,7 @@ class SpringDartHelper {
   final Set<({String name, String className, String content})> controllers;
 
   const SpringDartHelper(
+    this.package,
     this.driver,
     this.imports,
     this.springDartConfigurations,
@@ -30,7 +32,7 @@ class SpringDartHelper {
 
     imports.add('dart:convert');
 
-    final importsSorted = imports.toList()..sort();
+    final importsSorted = _importsNormalized(imports);
 
     if (springDartConfigurations.length > 1) {
       throw Exception('Only one SpringDartConfiguration is allowed!');
@@ -39,7 +41,7 @@ class SpringDartHelper {
     return '''// POWERED BY SPRING DART
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-${importsSorted.map((i) => 'import \'$i\';').join('\n')}
+${importsSorted.join('\n')}
 
 Future<void> server(List<String> args) async {
   final injector = Injector.instance;
@@ -65,5 +67,26 @@ return await \$defaultServerConfiguration.setup(SpringDart((request) => _excepti
             return await ${e.name}.setup(SpringDart((request) => _exceptionHandler(handler, request)));''';
           }).join('\n')}
 }''';
+  }
+
+  List<String> _importsNormalized(Set<String> imports) {
+    final dart = <String>[];
+    final normalized = <String>[];
+
+    for (final import in imports.map(Uri.parse)) {
+      if (import.scheme == 'dart') {
+        dart.add(import.toString());
+      } else if (import.scheme == 'package' && import.pathSegments.first != package) {
+        normalized.add('package:${import.pathSegments.first}/${import.pathSegments.first}.dart');
+      } else {
+        normalized.add(import.toString());
+      }
+    }
+
+    dart.sort();
+
+    normalized.sort();
+
+    return [...dart.map((i) => 'import \'$i\';'), '', ...normalized.map((i) => 'import \'$i\';')];
   }
 }

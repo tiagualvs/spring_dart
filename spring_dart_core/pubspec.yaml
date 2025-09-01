@@ -8,7 +8,6 @@ environment:
   sdk: ^3.9.0
 
 dependencies:
-  dson_adapter: ^1.2.0+2
   shelf: ^1.4.2
   shelf_router: ^1.1.4
   shelf_multipart: ^2.0.1

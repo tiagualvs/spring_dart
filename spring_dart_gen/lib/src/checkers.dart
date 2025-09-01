@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:analyzer/dart/element/element.dart';
 import 'package:source_gen/source_gen.dart';
 import 'package:spring_dart_core/spring_dart_core.dart';
 import 'package:spring_dart_sql/spring_dart_sql.dart';
@@ -29,6 +30,24 @@ final queryChecker = TypeChecker.typeNamed(Query, inPackage: 'spring_dart_core')
 final paramChecker = TypeChecker.typeNamed(Param, inPackage: 'spring_dart_core');
 final headerChecker = TypeChecker.typeNamed(Header, inPackage: 'spring_dart_core');
 final contextChecker = TypeChecker.typeNamed(Context, inPackage: 'spring_dart_core');
+
+ContentType contentTypeExtractor(Element element) {
+  final contentTypes = [
+    ApplicationJson(),
+    MultipartFormData(),
+    FormUrlEncoded(),
+    TextPlain(),
+    TextHtml(),
+  ];
+
+  for (final type in contentTypes) {
+    if (TypeChecker.typeNamed(type.runtimeType, inPackage: 'spring_dart_core').hasAnnotationOf(element)) {
+      return type;
+    }
+  }
+
+  return contentTypes.first;
+}
 
 final dtoChecker = TypeChecker.typeNamed(Dto, inPackage: 'spring_dart_core');
 final jsonKeyChecker = TypeChecker.typeNamed(JsonKey, inPackage: 'spring_dart_core');

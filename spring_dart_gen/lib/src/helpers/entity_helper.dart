@@ -110,27 +110,27 @@ class EntityHelper {
   
   @override
   AsyncResult<$entityName> insertOne(InsertOneParams<$entityName> params) async {
-    ${insertOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
+    ${insertOneMethodBuilder(driver, tableName, element)}
   }
 
   @override
   AsyncResult<$entityName> findOne(FindOneParams<$entityName> params) async {
-    ${findOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
+    ${findOneMethodBuilder(driver, tableName, element)}
   }
 
   @override
   AsyncResult<List<$entityName>> findMany(FindManyParams<$entityName> params) async {
-    ${findManyMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
+    ${findManyMethodBuilder(driver, tableName, element)}
   }
 
   @override
   AsyncResult<$entityName> updateOne(UpdateOneParams<$entityName> params) async {
-    ${updateOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
+    ${updateOneMethodBuilder(driver, tableName, element)}
   }
 
   @override
   AsyncResult<$entityName> deleteOne(DeleteOneParams<$entityName> params) async {
-    ${deleteOneMethodBuilder(driver, tableName, entityName, fields, element.constructors)}
+    ${deleteOneMethodBuilder(driver, tableName, element)}
   }
 }
 
@@ -293,13 +293,10 @@ String referencesStringBuilder(DartObject? type, Set<String> referencedTables) {
 String insertOneMethodBuilder(
   Driver driver,
   String tableName,
-  String entityName,
-  Iterable<FieldElement> fields,
-  List<ConstructorElement> constructors,
+  ClassElement classElement,
 ) {
   return switch (driver) {
-    SqliteFileDriver _ ||
-    SqliteMemoryDriver _ => _insertOneInSQLITE(driver.varName, tableName, entityName, fields, constructors),
+    SqliteFileDriver _ || SqliteMemoryDriver _ => _insertOneInSQLITE(driver.varName, tableName, classElement),
     _ => '',
   };
 }
@@ -307,13 +304,10 @@ String insertOneMethodBuilder(
 String findOneMethodBuilder(
   Driver driver,
   String tableName,
-  String entityName,
-  Iterable<FieldElement> fields,
-  List<ConstructorElement> constructors,
+  ClassElement classElement,
 ) {
   return switch (driver) {
-    SqliteFileDriver _ ||
-    SqliteMemoryDriver _ => _findOneInSQLITE(driver.varName, tableName, entityName, fields, constructors),
+    SqliteFileDriver _ || SqliteMemoryDriver _ => _findOneInSQLITE(driver.varName, tableName, classElement),
     _ => '',
   };
 }
@@ -321,13 +315,10 @@ String findOneMethodBuilder(
 String findManyMethodBuilder(
   Driver driver,
   String tableName,
-  String entityName,
-  Iterable<FieldElement> fields,
-  List<ConstructorElement> constructors,
+  ClassElement classElement,
 ) {
   return switch (driver) {
-    SqliteFileDriver _ ||
-    SqliteMemoryDriver _ => _findManyInSQLITE(driver.varName, tableName, entityName, fields.toList(), constructors),
+    SqliteFileDriver _ || SqliteMemoryDriver _ => _findManyInSQLITE(driver.varName, tableName, classElement),
     _ => '',
   };
 }
@@ -335,13 +326,10 @@ String findManyMethodBuilder(
 String updateOneMethodBuilder(
   Driver driver,
   String tableName,
-  String entityName,
-  Iterable<FieldElement> fields,
-  List<ConstructorElement> constructors,
+  ClassElement classElement,
 ) {
   return switch (driver) {
-    SqliteFileDriver _ ||
-    SqliteMemoryDriver _ => _updateOneInSQLITE(driver.varName, tableName, entityName, fields, constructors),
+    SqliteFileDriver _ || SqliteMemoryDriver _ => _updateOneInSQLITE(driver.varName, tableName, classElement),
     _ => '',
   };
 }
@@ -349,13 +337,10 @@ String updateOneMethodBuilder(
 String deleteOneMethodBuilder(
   Driver driver,
   String tableName,
-  String entityName,
-  Iterable<FieldElement> fields,
-  List<ConstructorElement> constructors,
+  ClassElement classElement,
 ) {
   return switch (driver) {
-    SqliteFileDriver _ ||
-    SqliteMemoryDriver _ => _deleteOneInSQLITE(driver.varName, tableName, entityName, fields, constructors),
+    SqliteFileDriver _ || SqliteMemoryDriver _ => _deleteOneInSQLITE(driver.varName, tableName, classElement),
     _ => '',
   };
 }
@@ -650,9 +635,7 @@ String deleteOneParamsBuilder(
 String _insertOneInSQLITE(
   String dialectVarName,
   String tableName,
-  String className,
-  Iterable<FieldElement> fields,
-  List<ConstructorElement> constructors,
+  ClassElement classElement,
 ) {
   return '''try {
   final stmt = $dialectVarName.prepare(params.query);
@@ -665,7 +648,7 @@ String _insertOneInSQLITE(
 
   final row = result.first;
 
-  final entity = ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
+  final entity = ${buildObjectFromConstructor(classElement: classElement, valueBuilder: (v) => 'row[\'$v\']')};
 
   return Success(entity);
 } on SqlException catch (e) {
@@ -678,9 +661,7 @@ String _insertOneInSQLITE(
 String _findOneInSQLITE(
   String dialectVarName,
   String tableName,
-  String className,
-  Iterable<FieldElement> fields,
-  List<ConstructorElement> constructors,
+  ClassElement classElement,
 ) {
   return '''try {
   final stmt = $dialectVarName.prepare(params.query);
@@ -693,7 +674,7 @@ String _findOneInSQLITE(
 
   final row = result.first;
 
-  final entity = ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
+  final entity = ${buildObjectFromConstructor(classElement: classElement, valueBuilder: (v) => 'row[\'$v\']')};
 
   return Success(entity);
 } on SqlException catch (e) {
@@ -706,9 +687,7 @@ String _findOneInSQLITE(
 String _findManyInSQLITE(
   String dialectVarName,
   String tableName,
-  String className,
-  List<FieldElement> fields,
-  List<ConstructorElement> constructors,
+  ClassElement classElement,
 ) {
   return '''try {
   final stmt = $dialectVarName.prepare(params.query);
@@ -716,7 +695,7 @@ String _findManyInSQLITE(
   final result = stmt.select(params.values);
 
   final entities = result.map((row) {
-    return ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
+    return ${buildObjectFromConstructor(classElement: classElement, valueBuilder: (v) => 'row[\'$v\']')};
   }).toList();
 
   return Success(entities);
@@ -728,9 +707,7 @@ String _findManyInSQLITE(
 String _updateOneInSQLITE(
   String dialectVarName,
   String tableName,
-  String className,
-  Iterable<FieldElement> fields,
-  List<ConstructorElement> constructors,
+  ClassElement classElement,
 ) {
   return '''try {
   final stmt = $dialectVarName.prepare(params.query);
@@ -743,7 +720,7 @@ String _updateOneInSQLITE(
 
   final row = result.first;
 
-  final entity =  ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
+  final entity =  ${buildObjectFromConstructor(classElement: classElement, valueBuilder: (v) => 'row[\'$v\']')};
 
   return Success(entity);
 } on SqlException catch (e) {
@@ -756,9 +733,7 @@ String _updateOneInSQLITE(
 String _deleteOneInSQLITE(
   String dialectVarName,
   String tableName,
-  String className,
-  Iterable<FieldElement> fields,
-  List<ConstructorElement> constructors,
+  ClassElement classElement,
 ) {
   return '''try {
   final stmt = $dialectVarName.prepare(params.query);
@@ -771,7 +746,7 @@ String _deleteOneInSQLITE(
 
   final row = result.first;
 
-  final entity = ${buildObjectFromConstructor(className: className, constructors: constructors, value: (v) => 'row[\'$v\']')};
+  final entity = ${buildObjectFromConstructor(classElement: classElement, valueBuilder: (v) => 'row[\'$v\']')};
   
   return Success(entity);
 } on SqlException catch (e) {
@@ -782,18 +757,32 @@ String _deleteOneInSQLITE(
 }
 
 String buildObjectFromConstructor({
-  required String className,
-  required List<ConstructorElement> constructors,
-  String Function(String? value)? value,
+  required ClassElement classElement,
+  String Function(String? value)? valueBuilder,
 }) {
-  final constructor = constructors.first;
+  final className = classElement.name;
+  final constructor = classElement.constructors.firstWhereOrNull((c) => c.formalParameters.isNotEmpty);
+  if (constructor == null) return '';
   final constructorParams = constructor.formalParameters;
+  final parsers = classElement.fields
+      .where((f) => withParserChecker.hasAnnotationOf(f))
+      .map(
+        (f) => (
+          field: f,
+          type: withParserChecker.firstAnnotationOf(f)?.getField('parser')?.toTypeValue()!,
+        ),
+      );
   return '$className(${constructorParams.map((p) {
     String buildValue() {
-      if (p.type.getDisplayString().startsWith('DateTime')) {
-        return 'DateTime.tryParse(${value?.call(p.name?.toSnakeCase()) ?? p.name?.toSnakeCase()})';
+      if (parsers.any((parser) => parser.field.name == p.name)) {
+        final parser = parsers.firstWhere((parser) => parser.field.name == p.name);
+        return '${parser.type}().decode(${valueBuilder?.call(p.name?.toSnakeCase()) ?? p.name?.toSnakeCase()})';
       }
-      return '${value?.call(p.name?.toSnakeCase()) ?? p.name?.toSnakeCase()}';
+
+      if (p.type.getDisplayString().startsWith('DateTime')) {
+        return 'DateTime.tryParse(${valueBuilder?.call(p.name?.toSnakeCase()) ?? p.name?.toSnakeCase()})';
+      }
+      return '${valueBuilder?.call(p.name?.toSnakeCase()) ?? p.name?.toSnakeCase()}';
     }
 
     String buildDefault() {

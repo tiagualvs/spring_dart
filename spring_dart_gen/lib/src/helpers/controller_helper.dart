@@ -1,8 +1,10 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
+import 'package:spring_dart_core/spring_dart_core.dart';
 import 'package:spring_dart_gen/src/checkers.dart';
 import 'package:spring_dart_gen/src/extensions/iterable_ext.dart';
 import 'package:spring_dart_gen/src/extensions/string_ext.dart';
+import 'package:spring_dart_gen/src/helpers/entity_helper.dart';
 
 class ControllerHelper {
   final Set<String> imports;
@@ -57,79 +59,6 @@ class ControllerHelper {
         final router = Router();
 
         ${element.methods.map((method) {
-      // Query params
-      final queryParameters = method.formalParameters.where((e) => queryChecker.hasAnnotationOf(e)).map((q) => (query: q, name: queryChecker.firstAnnotationOf(q)?.getField('name')?.toStringValue() ?? '')).toList();
-      if (!queryParameters.every((q) => stringChecker.isExactlyType(q.query.type))) {
-        throw Exception('Query parameters must be a nullable `String` only!');
-      }
-      if (queryParameters.any((q) => q.query.type.nullabilitySuffix == NullabilitySuffix.none)) {
-        throw Exception('Query parameters must be a nullable `String` only!');
-      }
-
-      // Path param
-      final params = method.formalParameters.where((p) => paramChecker.hasAnnotationOf(p)).map((p) => (param: p, name: paramChecker.firstAnnotationOf(p)?.getField('name')?.toStringValue() ?? '')).toList();
-      if (!params.every((p) => stringChecker.isExactlyType(p.param.type))) {
-        throw Exception('Path parameters must be `@String` only!');
-      }
-      if (params.any((p) => p.param.type.nullabilitySuffix != NullabilitySuffix.none)) {
-        throw Exception('Path parameters must be `String` only!');
-      }
-      final paramsString = switch (params.isEmpty) {
-        true => '',
-        false => ', ${params.map((p) => '${p.param.type.getDisplayString()} ${p.param.name}').join(', ')}',
-      };
-
-      // Context param
-      final contexts = method.formalParameters.where((c) => contextChecker.hasAnnotationOf(c)).map((c) => (context: c, name: contextChecker.firstAnnotationOf(c)?.getField('name')?.toStringValue() ?? '')).toList();
-
-      // Header param
-      final headers = method.formalParameters.where((h) => headerChecker.hasAnnotationOf(h));
-      if (headers.any((h) => h.type.nullabilitySuffix == NullabilitySuffix.none)) {
-        throw Exception('Header parameters must be a nullable `String` only!');
-      }
-
-      // Dtos
-      final bodies = method.formalParameters.where((e) => bodyChecker.hasAnnotationOf(e)).toList();
-      final formData = bodies.where((p) {
-        final contentType = bodyChecker.firstAnnotationOf(p)?.getField('contentType')?.getField('(super)')?.getField('value')?.toStringValue();
-
-        return contentType == 'multipart/form-data';
-      });
-      final json = bodies.where((p) {
-        final contentType = bodyChecker.firstAnnotationOf(p)?.getField('contentType')?.getField('(super)')?.getField('value')?.toStringValue();
-
-        return contentType == 'application/json';
-      });
-      final everyDtoHasAnnotation = switch (json.isNotEmpty) {
-        true => json.any(
-          (d) {
-            if (jsonChecker.isExactlyType(d.type)) {
-              return true;
-            }
-            final dtoElement = d.type.element;
-            if (dtoElement == null) return false;
-            return dtoElement.metadata.annotations.any(
-              (a) {
-                final type = a.computeConstantValue()?.type;
-                if (type == null) return false;
-                return dtoChecker.isExactlyType(type);
-              },
-            );
-          },
-        ),
-        false => true,
-      };
-      if (!everyDtoHasAnnotation) {
-        throw Exception('Only classes with @Dto annotation or @Map<String, dynamic> are allowed as body arguments.');
-      }
-
-      final routeParams = method.formalParameters.map((e) {
-        return switch (e.isNamed) {
-          true => '${e.name}: ${e.name}',
-          false => '${e.name}',
-        };
-      });
-
       if (getChecker.hasAnnotationOf(method) //
           || postChecker.hasAnnotationOf(method) //
           || putChecker.hasAnnotationOf(method) //
@@ -163,7 +92,73 @@ class ControllerHelper {
           _ => 'get',
         };
 
+        final contentType = contentTypeExtractor(method);
+
+        // Query params
+        final queryParameters = method.formalParameters.where((e) => queryChecker.hasAnnotationOf(e)).map((q) => (query: q, name: queryChecker.firstAnnotationOf(q)?.getField('name')?.toStringValue() ?? '')).toList();
+        if (!queryParameters.every((q) => stringChecker.isExactlyType(q.query.type))) {
+          throw Exception('Query parameters must be a nullable `String` only!');
+        }
+        if (queryParameters.any((q) => q.query.type.nullabilitySuffix == NullabilitySuffix.none)) {
+          throw Exception('Query parameters must be a nullable `String` only!');
+        }
+
+        // Path param
+        final params = method.formalParameters.where((p) => paramChecker.hasAnnotationOf(p)).map((p) => (param: p, name: paramChecker.firstAnnotationOf(p)?.getField('name')?.toStringValue() ?? '')).toList();
+        if (!params.every((p) => stringChecker.isExactlyType(p.param.type))) {
+          throw Exception('Path parameters must be `@String` only!');
+        }
+        if (params.any((p) => p.param.type.nullabilitySuffix != NullabilitySuffix.none)) {
+          throw Exception('Path parameters must be `String` only!');
+        }
+        final paramsString = switch (params.isEmpty) {
+          true => '',
+          false => ', ${params.map((p) => '${p.param.type.getDisplayString()} ${p.param.name}').join(', ')}',
+        };
+
+        // Context param
+        final contexts = method.formalParameters.where((c) => contextChecker.hasAnnotationOf(c)).map((c) => (context: c, name: contextChecker.firstAnnotationOf(c)?.getField('name')?.toStringValue() ?? '')).toList();
+
+        // Header param
+        final headers = method.formalParameters.where((h) => headerChecker.hasAnnotationOf(h));
+        if (headers.any((h) => h.type.nullabilitySuffix == NullabilitySuffix.none)) {
+          throw Exception('Header parameters must be a nullable `String` only!');
+        }
+
+        // Body
+        final bodies = method.formalParameters.where((e) => bodyChecker.hasAnnotationOf(e)).toList();
+
+        final everyDtoHasAnnotation = switch (contentType is ApplicationJson && bodies.isNotEmpty) {
+          true => bodies.any(
+            (d) {
+              if (jsonChecker.isExactlyType(d.type)) return true;
+              final dtoElement = d.type.element;
+              if (dtoElement == null) return false;
+              return dtoElement.metadata.annotations.any(
+                (a) {
+                  final type = a.computeConstantValue()?.type;
+                  if (type == null) return false;
+                  return dtoChecker.isExactlyType(type);
+                },
+              );
+            },
+          ),
+          false => true,
+        };
+
+        if (!everyDtoHasAnnotation) {
+          throw Exception('${element.name}/${method.name} - Only classes with @Dto annotation or @Map<String, dynamic> are allowed as body arguments.');
+        }
+
+        final routeParams = method.formalParameters.map((e) {
+          return switch (e.isNamed) {
+            true => '${e.name}: ${e.name}',
+            false => '${e.name}',
+          };
+        });
+
         final methodBuffer = StringBuffer();
+
         final routePath = getChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
             ?? postChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
             ?? putChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
@@ -202,9 +197,8 @@ class ControllerHelper {
           },
         );
 
-        methodBuffer.write(switch (formData.isEmpty) {
-          true => '',
-          false => '''final ${routeParams.first} = <FormData>[];
+        methodBuffer.write(switch (contentType is MultipartFormData) {
+          true => '''final ${routeParams.first} = <FormData>[];
             if (request.formData() case var form?) {
               await for (final formData in form.formData) {
                 ${routeParams.first}.add(formData);
@@ -213,22 +207,20 @@ class ControllerHelper {
             if (${routeParams.first}.isEmpty) {
               throw Exception('empty_form_data');
             }''',
+          _ => '',
         });
 
         methodBuffer.write(
-          switch (json.isEmpty) {
-            true => '',
-            false => json.map((p) {
-              final dtoType = p.type.getDisplayString();
+          switch (contentType is ApplicationJson) {
+            true => bodies.map((p) {
+              final dtoElement = p.type.element as ClassElement;
+              final dtoConstructors = dtoElement.constructors;
+              final dtoConstructor = dtoConstructors.firstWhereOrNull((c) => c.formalParameters.isNotEmpty);
+              if (dtoConstructor == null) throw Exception('dto_constructor_not_found');
               final dtoName = p.name;
 
               if (!jsonChecker.isExactlyType(p.type)) {
                 imports.add(p.type.element?.library?.uri.toString() ?? '');
-
-                final keys = (p.type.element as ClassElement).fields.where((f) => jsonKeyChecker.hasAnnotationOf(f)).map((f) => (
-                  field: f,
-                  key: jsonKeyChecker.firstAnnotationOf(f)?.getField('name')?.toStringValue() ?? '',
-                )).toList();
 
                 final parsers = (p.type.element as ClassElement).fields.where((f) => withParserChecker.hasAnnotationOf(f)).map((f) => (
                   field: f,
@@ -241,34 +233,18 @@ class ControllerHelper {
 
                 return '''
           final \$json = await request.readAsString();
-          final \$body = Map<String, dynamic>.from(json.decode(\$json));${switch (parsers.isEmpty) {
-                  true => '',
-                  false => parsers.map((p) {
-                    final key = keys.firstWhereOrNull((k) => k.field.name == p.field.name)?.key ?? p.field.name;
-
-                    return '''final ${p.type?.getDisplayString().toCamelCase()} = ${p.type?.getDisplayString()}();
-          \$body['$key'] = ${p.type?.getDisplayString().toCamelCase()}.decode(\$body['$key']);''';
-                  }).join('\n'),
-                }}
-          final \$dson = DSON();
-          final $dtoName = \$dson.fromJson<$dtoType>(
-            \$body, 
-            $dtoType.new,
-            ${switch (keys.isNotEmpty) {
-                  true => '''aliases: {
-                ${keys.map((k) {
-                    return '''${p.type.getDisplayString()}: {'${k.field.name}' : '${k.key}'},''';
-                  }).join(',\n')}
-              }''',
-                  false => '',
-                }}
-          );''';
+          final \$body = Map<String, dynamic>.from(json.decode(\$json));
+          final $dtoName = ${buildObjectFromConstructor(
+                  classElement: dtoElement,
+                  valueBuilder: (v) => '\$body[\'$v\']',
+                )};''';
               } else {
                 return '''
           final \$json = await request.readAsString();
           final $dtoName = Map<String, dynamic>.from(json.decode(\$json));''';
               }
             }).join('\n'),
+            _ => '',
           },
         );
 

@@ -101,6 +101,7 @@ class ServerBuilder extends Builder {
 
     buffer.writeln(
       SpringDartHelper(
+        buildStep.inputId.package,
         driver,
         imports,
         springDartConfigurations,

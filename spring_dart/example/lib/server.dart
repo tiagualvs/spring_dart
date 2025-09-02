@@ -1,4 +1,4 @@
-// POWERED BY SPRING DART
+// POWERED BY SPRING DART - 2025-09-02T16:11:23.250976
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'dart:async';
@@ -143,7 +143,7 @@ class _$AuthController extends AuthController {
 }
 
 class _$UsersController extends UsersController {
-  _$UsersController(super.repository);
+  const _$UsersController(super.repository);
 
   FutureOr<Response> handler(Request request) async {
     final router = Router();
@@ -165,7 +165,7 @@ class _$UsersController extends UsersController {
     });
 
     router.get('/', (Request request) async {
-      return get();
+      return findMany();
     });
 
     router.post('/', (Request request) async {
@@ -182,15 +182,15 @@ class _$UsersController extends UsersController {
     });
 
     router.get('/<id>', (Request request, String id) async {
-      return getById(id);
+      return findOne(id);
     });
 
     router.put('/<id>', (Request request, String id) async {
-      return put(id);
+      return updateOne(id);
     });
 
     router.delete('/<id>', (Request request, String id) async {
-      return delete(id);
+      return deleteOne(id);
     });
     return router.call(request);
   }

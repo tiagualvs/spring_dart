@@ -59,6 +59,10 @@ class ControllerHelper {
         final router = Router();
 
         ${element.methods.map((method) {
+      Exception exception(String message) {
+        return Exception('(${element.name}/${method.name}) $message');
+      }
+
       if (getChecker.hasAnnotationOf(method) //
           || postChecker.hasAnnotationOf(method) //
           || putChecker.hasAnnotationOf(method) //
@@ -97,19 +101,19 @@ class ControllerHelper {
         // Query params
         final queryParameters = method.formalParameters.where((e) => queryChecker.hasAnnotationOf(e)).map((q) => (query: q, name: queryChecker.firstAnnotationOf(q)?.getField('name')?.toStringValue() ?? '')).toList();
         if (!queryParameters.every((q) => stringChecker.isExactlyType(q.query.type))) {
-          throw Exception('Query parameters must be a nullable `String` only!');
+          throw exception('Query parameters must be a nullable `String` only!');
         }
         if (queryParameters.any((q) => q.query.type.nullabilitySuffix == NullabilitySuffix.none)) {
-          throw Exception('Query parameters must be a nullable `String` only!');
+          throw exception('Query parameters must be a nullable `String` only!');
         }
 
         // Path param
         final params = method.formalParameters.where((p) => paramChecker.hasAnnotationOf(p)).map((p) => (param: p, name: paramChecker.firstAnnotationOf(p)?.getField('name')?.toStringValue() ?? '')).toList();
         if (!params.every((p) => stringChecker.isExactlyType(p.param.type))) {
-          throw Exception('Path parameters must be `@String` only!');
+          throw exception('Path parameters must be `@String` only!');
         }
         if (params.any((p) => p.param.type.nullabilitySuffix != NullabilitySuffix.none)) {
-          throw Exception('Path parameters must be `String` only!');
+          throw exception('Path parameters must be `String` only!');
         }
         final paramsString = switch (params.isEmpty) {
           true => '',
@@ -122,13 +126,17 @@ class ControllerHelper {
         // Header param
         final headers = method.formalParameters.where((h) => headerChecker.hasAnnotationOf(h));
         if (headers.any((h) => h.type.nullabilitySuffix == NullabilitySuffix.none)) {
-          throw Exception('Header parameters must be a nullable `String` only!');
+          throw exception('Header parameters must be a nullable `String` only!');
         }
 
         // Body
         final bodies = method.formalParameters.where((e) => bodyChecker.hasAnnotationOf(e)).toList();
 
-        if (bodies.isNotEmpty) imports.add('dart:convert');
+        if (bodies.isNotEmpty && contentType is ApplicationJson) imports.add('dart:convert');
+
+        if (bodies.length > 1 && contentType is MultipartFormData) {
+          throw exception('Cannot have multiple body parameters when content type is `multipart/form-data`!');
+        }
 
         final everyDtoHasAnnotation = switch (contentType is ApplicationJson && bodies.isNotEmpty) {
           true => bodies.any(
@@ -149,7 +157,7 @@ class ControllerHelper {
         };
 
         if (!everyDtoHasAnnotation) {
-          throw Exception('${element.name}/${method.name} - Only classes with @Dto annotation or @Map<String, dynamic> are allowed as body arguments.');
+          throw exception('Only classes with @Dto annotation or @Map<String, dynamic> are allowed as body arguments.');
         }
 
         final routeParams = method.formalParameters.map((e) {
@@ -172,54 +180,54 @@ class ControllerHelper {
             ?? connectChecker.firstAnnotationOf(method)?.getField('path')?.toStringValue() //
             ?? '';
 
-        methodBuffer.write(
-          switch (queryParameters.isEmpty) {
-            true => '',
-            false => queryParameters.map((q) {
-              return '''    final ${q.name} = request.url.queryParameters['${q.name}'];''';
-            }).join('\n'),
-          },
-        );
+        if (routePath.isEmpty) {
+          throw exception('Method not given!');
+        }
 
-        methodBuffer.write(
-          switch (headers.isEmpty) {
-            true => '',
-            false => headers.map((h) {
-              return '''    final ${h.name} = request.headers['${h.name}'];''';
+        if (queryParameters.isNotEmpty) {
+          methodBuffer.write(
+            queryParameters.map((q) {
+              return '''final ${q.name} = request.url.queryParameters['${q.name}'];''';
             }).join('\n'),
-          },
-        );
+          );
+        }
 
-        methodBuffer.write(
-          switch (contexts.isEmpty) {
-            true => '',
-            false => contexts.map((c) {
+        if (headers.isNotEmpty) {
+          methodBuffer.write(
+            headers.map((h) {
+              return '''final ${h.name} = request.headers['${h.name}'];''';
+            }).join('\n'),
+          );
+        }
+
+        if (contexts.isNotEmpty) {
+          methodBuffer.write(
+            contexts.map((c) {
               return '''final ${c.context.name} = request.context['${c.name}'] as ${c.context.type.getDisplayString()};''';
             }).join('\n'),
-          },
-        );
+          );
+        }
 
-        methodBuffer.write(switch (contentType is MultipartFormData) {
-          true => '''final \$contentLength = request.contentLength ?? 0;
+        if (contentType is MultipartFormData) {
+          methodBuffer.write('''final \$contentLength = request.contentLength ?? 0;
             final \$controller = StreamController<FormField>.broadcast();
             final ${routeParams.first} = Form(\$contentLength, \$controller.stream);
             if (request.formData() case var form?) {
               form.formData.map(FormField.fromFormData).listen(\$controller.add, onDone: \$controller.close, onError: \$controller.addError);
-            }''',
-          _ => '',
-        });
+            }''');
+        }
 
         final validators = <String>[];
 
-        methodBuffer.write(
-          switch (contentType is ApplicationJson) {
-            true => bodies.map((p) {
+        if (contentType is ApplicationJson) {
+          methodBuffer.write(
+            bodies.map((p) {
               final validated = validatedChecker.hasAnnotationOf(p);
               final dtoElement = p.type.element as ClassElement;
               final dtoFields = dtoElement.fields;
               final dtoConstructors = dtoElement.constructors;
               final dtoConstructor = dtoConstructors.firstWhereOrNull((c) => c.formalParameters.isNotEmpty);
-              if (dtoConstructor == null) throw Exception('dto_constructor_not_found');
+              if (dtoConstructor == null) throw exception('Invalid DTO constructor. Expected a constructor with parameters.');
               final dtoName = p.name;
 
               if (!jsonChecker.isExactlyType(p.type)) {
@@ -302,9 +310,8 @@ class ControllerHelper {
           final $dtoName = Map<String, dynamic>.from(json.decode(\$json));''';
               }
             }).join('\n'),
-            _ => '',
-          },
-        );
+          );
+        }
 
         return '''router.$verb('$routePath', (Request request$paramsString) async {
         $methodBuffer${validators.isNotEmpty ? '''final \$exceptions = <SpringDartException>[${validators.join(', ')}];

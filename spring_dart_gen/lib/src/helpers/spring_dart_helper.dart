@@ -36,7 +36,7 @@ class SpringDartHelper {
       throw Exception('Only one SpringDartConfiguration is allowed!');
     }
 
-    return '''// POWERED BY SPRING DART
+    return '''// POWERED BY SPRING DART - ${DateTime.now().toIso8601String()}
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 ${importsSorted.join('\n')}

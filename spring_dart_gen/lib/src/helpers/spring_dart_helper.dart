@@ -85,6 +85,8 @@ return await \$defaultServerConfiguration.setup(SpringDart((request) => _excepti
 
     normalized.sort();
 
+    normalized.removeWhere((i) => i == 'package:spring_dart_core/spring_dart_core.dart');
+
     return [...dart.map((i) => 'import \'$i\';'), '', ...normalized.map((i) => 'import \'$i\';')];
   }
 }

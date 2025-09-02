@@ -1,6 +1,5 @@
 import 'package:example/server.dart';
 import 'package:example/src/entities/credentials_entity.dart';
-import 'package:example/src/exceptions.dart';
 import 'package:spring_dart/spring_dart.dart';
 import 'package:spring_dart_sql/spring_dart_sql.dart';
 
@@ -15,7 +14,7 @@ class AuthController {
   const AuthController(this.authService);
 
   @Post('/sign-up')
-  Future<Response> signUp(@Body() SignUpDto dto) async {
+  Future<Response> signUp(@Body() @Validated() SignUpDto dto) async {
     final result = await authService.signUp(dto);
 
     return result.fold(
@@ -24,14 +23,14 @@ class AuthController {
       },
       (error) {
         if (error is SqlException) return error.toResponse();
-        if (error is ServerException) return error.toResponse();
+        if (error is SpringDartException) return error.toResponse();
         throw error;
       },
     );
   }
 
   @Post('/sign-in')
-  Future<Response> signIn(@Body() SignInDto dto) async {
+  Future<Response> signIn(@Body() @Validated() SignInDto dto) async {
     final result = await authService.signIn(dto);
     return result.fold(
       (user) {
@@ -44,7 +43,7 @@ class AuthController {
       },
       (error) {
         if (error is SqlException) return error.toResponse();
-        if (error is ServerException) return error.toResponse();
+        if (error is SpringDartException) return error.toResponse();
         throw error;
       },
     );
@@ -73,7 +72,7 @@ class AuthController {
       },
       (error) {
         if (error is SqlException) return error.toResponse();
-        if (error is ServerException) return error.toResponse();
+        if (error is SpringDartException) return error.toResponse();
         throw error;
       },
     );

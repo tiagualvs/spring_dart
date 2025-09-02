@@ -1,4 +1,3 @@
-import 'package:example/src/exceptions.dart';
 import 'package:spring_dart/spring_dart.dart';
 
 @ControllerAdvice()
@@ -8,8 +7,8 @@ class ServerControllerAdvice {
     return Json(500, body: {'error': exception.toString()});
   }
 
-  @ExceptionHandler(ServerException)
-  Response serverExceptionHandler(ServerException exception) {
+  @ExceptionHandler(SpringDartException)
+  Response serverExceptionHandler(SpringDartException exception) {
     return Json(exception.statusCode, body: {'error': exception.message});
   }
 }

@@ -18,7 +18,6 @@ import 'package:example/src/entities/comment_entity.dart';
 import 'package:example/src/entities/participant_entity.dart';
 import 'package:example/src/entities/post_entity.dart';
 import 'package:example/src/entities/user_entity.dart';
-import 'package:example/src/exceptions.dart';
 import 'package:example/src/server_controller_advice.dart';
 import 'package:example/src/services/auth_service.dart';
 import 'package:spring_dart/spring_dart.dart';
@@ -87,6 +86,27 @@ class _$AuthController extends AuthController {
         email: $body['email'] ?? '',
         password: $body['password'] ?? '',
       );
+      final $exceptions = <SpringDartException>[
+        if (!Validators.isNotEmpty(dto.name))
+          BadRequestException('Name is required!'),
+        if (!Validators.isEmail(dto.email))
+          BadRequestException('Email is invalid!'),
+        if (!Validators.patternMatches(dto.password, r'[a-z]'))
+          BadRequestException('Password must have a least one lowercase!'),
+        if (!Validators.patternMatches(dto.password, r'[A-Z]'))
+          BadRequestException('Password must have a least one uppercase!'),
+        if (!Validators.patternMatches(dto.password, r'[0-9]'))
+          BadRequestException('Password must have a least one number!'),
+        if (!Validators.patternMatches(dto.password, r'[!@#$%^&*(),.?"{}|<>]'))
+          BadRequestException(
+            'Password must have a least one special character!',
+          ),
+        if (!Validators.isGreaterThanOrEqual(dto.password, 6))
+          BadRequestException('Field less than 6!'),
+      ];
+      if ($exceptions.isNotEmpty) {
+        throw CustomException(400, $exceptions, 'Request validation fail!');
+      }
       return signUp(dto);
     });
 
@@ -97,6 +117,15 @@ class _$AuthController extends AuthController {
         email: $body['email'] ?? '',
         password: $body['password'] ?? '',
       );
+      final $exceptions = <SpringDartException>[
+        if (!Validators.isEmail(dto.email))
+          BadRequestException('Invalid email!'),
+        if (!Validators.isNotEmpty(dto.password))
+          BadRequestException('Password is required!'),
+      ];
+      if ($exceptions.isNotEmpty) {
+        throw CustomException(400, $exceptions, 'Request validation fail!');
+      }
       return signIn(dto);
     });
 
@@ -1653,7 +1682,7 @@ FutureOr<Response> _exceptionHandler(Handler handler, Request request) async {
   } catch (e) {
     if (e is Exception) {
       return ServerControllerAdvice().exceptionHandler(e);
-    } else if (e is ServerException) {
+    } else if (e is SpringDartException) {
       return ServerControllerAdvice().serverExceptionHandler(e);
     } else {
       return Json(500, body: {'error': e.toString()});

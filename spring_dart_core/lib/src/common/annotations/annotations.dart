@@ -1,3 +1,5 @@
+part 'dtos.dart';
+
 /// `@Controller`
 class Controller {
   final String path;
@@ -141,23 +143,6 @@ class Context {
 class Header {
   final String name;
   const Header(this.name);
-}
-
-/// `@Dto`
-class Dto {
-  const Dto();
-}
-
-/// `@JsonKey`
-class JsonKey {
-  final String name;
-  const JsonKey(this.name);
-}
-
-/// `@WithParser`
-class WithParser {
-  final Type parser;
-  const WithParser(this.parser);
 }
 
 /// `@WithMiddleware`

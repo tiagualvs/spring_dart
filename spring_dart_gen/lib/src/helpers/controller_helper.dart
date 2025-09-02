@@ -212,16 +212,48 @@ class ControllerHelper {
           _ => '',
         });
 
+        final validators = <String>[];
+
         methodBuffer.write(
           switch (contentType is ApplicationJson) {
             true => bodies.map((p) {
+              final validated = validatedChecker.hasAnnotationOf(p);
               final dtoElement = p.type.element as ClassElement;
+              final dtoFields = dtoElement.fields;
               final dtoConstructors = dtoElement.constructors;
               final dtoConstructor = dtoConstructors.firstWhereOrNull((c) => c.formalParameters.isNotEmpty);
               if (dtoConstructor == null) throw Exception('dto_constructor_not_found');
               final dtoName = p.name;
 
               if (!jsonChecker.isExactlyType(p.type)) {
+                if (validated) {
+                  for (final field in dtoFields) {
+                    final email = validatorChecker.email.firstAnnotationOf(field);
+                    if (email != null) {
+                      validators.add('''if (!Validators.isEmail($dtoName.${field.name})) BadRequestException('${email.getField('(super)')?.getField('message')?.toStringValue()}')''');
+                    }
+                    final notEmpty = validatorChecker.notEmpty.firstAnnotationOf(field);
+                    if (notEmpty != null) {
+                      validators.add('''if (!Validators.isNotEmpty($dtoName.${field.name})) BadRequestException('${notEmpty.getField('(super)')?.getField('message')?.toStringValue()}')''');
+                    }
+                    final patterns = validatorChecker.pattern.annotationsOf(field);
+                    for (final pattern in patterns) {
+                      final patternString = pattern.getField('regexp')?.toStringValue() ?? '';
+                      validators.add('''if (!Validators.patternMatches($dtoName.${field.name}, r'$patternString')) BadRequestException('${pattern.getField('(super)')?.getField('message')?.toStringValue()}')''');
+                    }
+                    final min = validatorChecker.min.firstAnnotationOf(field);
+                    if (min != null) {
+                      final minInt = min.getField('value')?.toIntValue();
+                      validators.add('''if (!Validators.isGreaterThanOrEqual($dtoName.${field.name}, $minInt)) BadRequestException('${min.getField('(super)')?.getField('message')?.toStringValue()}')''');
+                    }
+                    final max = validatorChecker.max.firstAnnotationOf(field);
+                    if (max != null) {
+                      final maxInt = max.getField('value')?.toIntValue();
+                      validators.add('''if (!Validators.isLessThanOrEqual($dtoName.${field.name}, $maxInt)) BadRequestException('${max.getField('(super)')?.getField('message')?.toStringValue()}')''');
+                    }
+                  }
+                }
+
                 imports.add(p.type.element?.library?.uri.toString() ?? '');
 
                 final parsers = (p.type.element as ClassElement).fields.where((f) => withParserChecker.hasAnnotationOf(f)).map((f) => (
@@ -236,10 +268,7 @@ class ControllerHelper {
                 return '''
           final \$json = await request.readAsString();
           final \$body = Map<String, dynamic>.from(json.decode(\$json));
-          final $dtoName = ${buildObjectFromConstructor(
-                  classElement: dtoElement,
-                  valueBuilder: (v) => '\$body[\'$v\']',
-                )};''';
+          final $dtoName = ${buildObjectFromConstructor(classElement: dtoElement, valueBuilder: (v) => '\$body[\'$v\']')};''';
               } else {
                 return '''
           final \$json = await request.readAsString();
@@ -251,7 +280,10 @@ class ControllerHelper {
         );
 
         return '''router.$verb('$routePath', (Request request$paramsString) async {
-        $methodBuffer
+        $methodBuffer${validators.isNotEmpty ? '''final \$exceptions = <SpringDartException>[${validators.join(', ')}];
+        if (\$exceptions.isNotEmpty) {
+          throw CustomException(400, \$exceptions, 'Request validation fail!');
+        }''' : ''}
         return ${method.name}(${routeParams.join(', ')});
       });''';
       }

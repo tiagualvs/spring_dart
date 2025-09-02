@@ -50,6 +50,20 @@ ContentType contentTypeExtractor(Element element) {
 }
 
 final dtoChecker = TypeChecker.typeNamed(Dto, inPackage: 'spring_dart_core');
+final validatedChecker = TypeChecker.typeNamed(Validated, inPackage: 'spring_dart_core');
+final validatorChecker = (
+  core: TypeChecker.typeNamed(Validator, inPackage: 'spring_dart_core'),
+  email: TypeChecker.typeNamed(Email, inPackage: 'spring_dart_core'),
+  notEmpty: TypeChecker.typeNamed(NotEmpty, inPackage: 'spring_dart_core'),
+  min: TypeChecker.typeNamed(Min, inPackage: 'spring_dart_core'),
+  max: TypeChecker.typeNamed(Max, inPackage: 'spring_dart_core'),
+  size: TypeChecker.typeNamed(Size, inPackage: 'spring_dart_core'),
+  pattern: TypeChecker.typeNamed(Pattern, inPackage: 'spring_dart_core'),
+  greaterThan: TypeChecker.typeNamed(GreaterThan, inPackage: 'spring_dart_core'),
+  greaterThanOrEqual: TypeChecker.typeNamed(GreaterThanOrEqual, inPackage: 'spring_dart_core'),
+  lessThan: TypeChecker.typeNamed(LessThan, inPackage: 'spring_dart_core'),
+  lessThanOrEqual: TypeChecker.typeNamed(LessThanOrEqual, inPackage: 'spring_dart_core'),
+);
 final jsonKeyChecker = TypeChecker.typeNamed(JsonKey, inPackage: 'spring_dart_core');
 final withParserChecker = TypeChecker.typeNamed(WithParser, inPackage: 'spring_dart_core');
 

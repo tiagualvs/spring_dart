@@ -3,7 +3,6 @@ import 'package:example/src/config/beans/password_bean.dart';
 import 'package:example/src/config/security_configuration.dart';
 import 'package:example/src/dtos/sign_in_dto.dart';
 import 'package:example/src/entities/user_entity.dart';
-import 'package:example/src/exceptions.dart';
 import 'package:spring_dart/spring_dart.dart';
 import 'package:spring_dart_sql/spring_dart_sql.dart';
 

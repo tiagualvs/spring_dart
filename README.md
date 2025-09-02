@@ -54,7 +54,35 @@ You don't need to write these files manually - they are generated automatically 
 
 ### Basic Usage
 
-1. Create a controller:
+DTOs:
+
+```dart
+import 'package:spring_dart/spring_dart.dart';
+
+@Dto()
+class InsertOneUserDto {
+  @NotEmpty(message: 'Name is required!')
+  final String name;
+
+  @Size(3, 24, message: 'Username must be between 3 and 24 characters!')
+  @Pattern('[a-zA-Z0-9_]', message: 'Username must contain only letters, numbers and underscores!')
+  final String username;
+
+  @Email(message: 'Email is invalid!')
+  final String email;
+
+  @Min(6)
+  @Pattern('[a-z]', message: 'Password must have a least one lowercase!')
+  @Pattern('[A-Z]', message: 'Password must have a least one uppercase!')
+  @Pattern('[0-9]', message: 'Password must have a least one number!')
+  @Pattern(r'[!@#$%^&*(),.?"{}|<>]', message: 'Password must have a least one special character!')
+  final String password;
+
+  const InsertOneUserDto({required this.name, required this.username, required this.email, required this.password});
+}
+```
+
+Controllers:
 
 ```dart
 import 'package:spring_dart/spring_dart.dart';
@@ -63,48 +91,77 @@ import 'package:spring_dart/spring_dart.dart';
 class UsersController {
   final UsersRepository repository;
 
-  UsersController(this.repository); // Dependency injection
+  const UsersController(this.repository); // Dependency injection
 
   @Get('/')
-  Future<Response> getAll() async {
-    final users = await repository.findAll();
-    return Json.ok(users);
+  Future<Response> findMany() async {
+    final result = await repository.findMany();
+    return result.fold(
+      (users) => Json.ok(body: users), // Serialization configurated on ServerConfiguration below
+      (error) => error.toResponse(),
+    );
   }
 
   @Get('/<id>')
-  Future<Response> getById(@Param('id') String id) async {
-    final user = await repository.findById(id);
-    return Json.ok(user);
+  Future<Response> findOne(@Param('id') String id) async {
+    final result = await repository.findOne(FindOneUserParams(id));
+    return result.fold(
+      (user) => Json.ok(body: user), // Serialization configurated on ServerConfiguration below
+      (error) => error.toResponse(),
+    );
   }
 
   @Post('/')
-  Future<Response> create(@Body() UserDto dto) async {
-    final user = await repository.save(dto);
-    return Json.created(user);
+  Future<Response> insertOne(@Body() InsertOneUserDto dto) async {
+    final result = await repository.insertOne(
+      InsertOneUserParams(
+        name: dto.name,
+        username: dto.username,
+        email: dto.email,
+        password: dto.password,
+      ),
+    );
+    return result.fold(
+      (user) => Json.created(body: user), // Serialization configurated on ServerConfiguration below
+      (error) => error.toResponse(),
+    );
   }
 
   @Put('/<id>')
-  Future<Response> update(@Param('id') String id, @Body() UserDto dto) async {
-    final user = await repository.update(id, dto);
-    return Json.ok(user);
+  Future<Response> updateOne(@Param('id') String id, @Body() UpdateOneUserDto dto) async {
+    final result = await repository.updateOne(
+      UpdateOneUserParams(
+        id,
+        name: dto.name,
+        username: dto.username,
+        email: dto.email,
+        password: dto.password,
+      ),
+    );
+    return result.fold(
+      (user) => Json.ok(body: user), // Serialization configurated on ServerConfiguration below
+      (error) => error.toResponse(),
+    );
   }
 
   @Delete('/<id>')
-  Future<Response> delete(@Param('id') String id) async {
-    await repository.delete(id);
-    return Json.noContent();
+  Future<Response> deleteOne(@Param('id') String id) async {
+    final result = await repository.deleteOne(DeleteOneUserParams(id));
+    return result.fold(
+      (_) => Json.noContent(),
+      (error) => error.toResponse(),
+    );
   }
 }
 ```
 
-2. Create an entity:
+Entities
 
 ```dart
 import 'package:spring_dart_sql/spring_dart_sql.dart';
 
 @Entity()
 @Table('users')
-@UniqueConstraint(['email', 'username'])
 class UserEntity {
   @PrimaryKey()
   @GeneratedValue()
@@ -113,13 +170,13 @@ class UserEntity {
   @Column('name', VARCHAR(255))
   final String name;
 
+  @Unique()
   @Column('username', VARCHAR(24))
   final String username;
 
   @Unique()
   final String email;
 
-  @Check.isNotEmpty()
   final String password;
 
   @Nullable()
@@ -143,39 +200,29 @@ class UserEntity {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'username': username,
+      'email': email,
+      'password': password,
+      'image': image,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+    };
+  }
 }
 ```
 
-3. Configure your database in `config.yaml`:
+Database Configuration:
 
 ```yaml
 host: 0.0.0.0
 port: 8080
 database_url: sqlite://database.db
 ddl-auto: create
-```
-
-4. Set up your server:
-
-> Note: Repositories for your entities will be automatically generated and injected.
-
-```dart
-// This file is automatically generated by Spring Dart
-// You don't need to write this code manually
-
-import 'package:spring_dart/spring_dart.dart';
-
-Future<void> server(List<String> args) async {
-  // The injector and router are automatically set up
-  final injector = Injector.instance;
-  final router = Router();
-  
-  // Configurations, beans, components, repositories, services, and controllers
-  // are automatically registered based on your annotations
-  
-  // The server is started using your custom configuration if available,
-  // or the default configuration if not
-}
 ```
 
 ## Automatic Repository Generation

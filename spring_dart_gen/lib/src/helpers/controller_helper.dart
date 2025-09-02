@@ -200,14 +200,11 @@ class ControllerHelper {
         );
 
         methodBuffer.write(switch (contentType is MultipartFormData) {
-          true => '''final ${routeParams.first} = <FormData>[];
+          true => '''final \$contentLength = request.contentLength ?? 0;
+            final \$controller = StreamController<FormField>.broadcast();
+            final ${routeParams.first} = Form(\$contentLength, \$controller.stream);
             if (request.formData() case var form?) {
-              await for (final formData in form.formData) {
-                ${routeParams.first}.add(formData);
-              }
-            }
-            if (${routeParams.first}.isEmpty) {
-              throw Exception('empty_form_data');
+              form.formData.map(FormField.fromFormData).listen(\$controller.add, onDone: \$controller.close, onError: \$controller.addError);
             }''',
           _ => '',
         });
@@ -232,6 +229,10 @@ class ControllerHelper {
                     if (email != null) {
                       validators.add('''if (!Validators.isEmail($dtoName.${field.name})) BadRequestException('${email.getField('(super)')?.getField('message')?.toStringValue()}')''');
                     }
+                    final notNull = validatorChecker.notNull.firstAnnotationOf(field);
+                    if (notNull != null) {
+                      validators.add('''if (!Validators.isNotNull($dtoName.${field.name})) BadRequestException('${notNull.getField('(super)')?.getField('message')?.toStringValue()}')''');
+                    }
                     final notEmpty = validatorChecker.notEmpty.firstAnnotationOf(field);
                     if (notEmpty != null) {
                       validators.add('''if (!Validators.isNotEmpty($dtoName.${field.name})) BadRequestException('${notEmpty.getField('(super)')?.getField('message')?.toStringValue()}')''');
@@ -250,6 +251,32 @@ class ControllerHelper {
                     if (max != null) {
                       final maxInt = max.getField('value')?.toIntValue();
                       validators.add('''if (!Validators.isLessThanOrEqual($dtoName.${field.name}, $maxInt)) BadRequestException('${max.getField('(super)')?.getField('message')?.toStringValue()}')''');
+                    }
+                    final size = validatorChecker.size.firstAnnotationOf(field);
+                    if (size != null) {
+                      final minInt = size.getField('min')?.toIntValue();
+                      final maxInt = size.getField('max')?.toIntValue();
+                      validators.add('''if (!Validators.isBetween($dtoName.${field.name}, $minInt, $maxInt)) BadRequestException('${size.getField('(super)')?.getField('message')?.toStringValue()}')''');
+                    }
+                    final gt = validatorChecker.greaterThan.firstAnnotationOf(field);
+                    if (gt != null) {
+                      final gtInt = gt.getField('value')?.toIntValue();
+                      validators.add('''if (!Validators.isGreaterThan($dtoName.${field.name}, $gtInt)) BadRequestException('${gt.getField('(super)')?.getField('message')?.toStringValue()}')''');
+                    }
+                    final gte = validatorChecker.greaterThanOrEqual.firstAnnotationOf(field);
+                    if (gte != null) {
+                      final gteInt = gte.getField('value')?.toIntValue();
+                      validators.add('''if (!Validators.isGreaterThanOrEqual($dtoName.${field.name}, $gteInt)) BadRequestException('${gte.getField('(super)')?.getField('message')?.toStringValue()}')''');
+                    }
+                    final lt = validatorChecker.lessThan.firstAnnotationOf(field);
+                    if (lt != null) {
+                      final ltInt = lt.getField('value')?.toIntValue();
+                      validators.add('''if (!Validators.isLessThan($dtoName.${field.name}, $ltInt)) BadRequestException('${lt.getField('(super)')?.getField('message')?.toStringValue()}')''');
+                    }
+                    final lte = validatorChecker.lessThanOrEqual.firstAnnotationOf(field);
+                    if (lte != null) {
+                      final lteInt = lte.getField('value')?.toIntValue();
+                      validators.add('''if (!Validators.isLessThanOrEqual($dtoName.${field.name}, $lteInt)) BadRequestException('${lte.getField('(super)')?.getField('message')?.toStringValue()}')''');
                     }
                   }
                 }

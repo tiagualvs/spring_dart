@@ -10,7 +10,16 @@ class UsersController {
 
   @Post('/upload')
   @MultipartFormData()
-  Future<Response> upload(@Body() List<FormData> fields) async {
+  Future<Response> upload(@Body() Form form) async {
+    await for (final field in form.fields) {
+      if (field is TextFormField) {
+        // final text = await field.readString();
+      } else if (field is FileFormField) {
+        // final bytes = await field.readBytes();
+        // final filename = field.filename;
+        // final mimeType = field.mimeType;
+      }
+    }
     return Json.noContent();
   }
 

@@ -54,6 +54,7 @@ final validatedChecker = TypeChecker.typeNamed(Validated, inPackage: 'spring_dar
 final validatorChecker = (
   core: TypeChecker.typeNamed(Validator, inPackage: 'spring_dart_core'),
   email: TypeChecker.typeNamed(Email, inPackage: 'spring_dart_core'),
+  notNull: TypeChecker.typeNamed(NotNull, inPackage: 'spring_dart_core'),
   notEmpty: TypeChecker.typeNamed(NotEmpty, inPackage: 'spring_dart_core'),
   min: TypeChecker.typeNamed(Min, inPackage: 'spring_dart_core'),
   max: TypeChecker.typeNamed(Max, inPackage: 'spring_dart_core'),

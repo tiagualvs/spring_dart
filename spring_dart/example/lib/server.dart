@@ -149,16 +149,19 @@ class _$UsersController extends UsersController {
     final router = Router();
 
     router.post('/upload', (Request request) async {
-      final fields = <FormData>[];
+      final $contentLength = request.contentLength ?? 0;
+      final $controller = StreamController<FormField>.broadcast();
+      final form = Form($contentLength, $controller.stream);
       if (request.formData() case var form?) {
-        await for (final formData in form.formData) {
-          fields.add(formData);
-        }
+        form.formData
+            .map(FormField.fromFormData)
+            .listen(
+              $controller.add,
+              onDone: $controller.close,
+              onError: $controller.addError,
+            );
       }
-      if (fields.isEmpty) {
-        throw Exception('empty_form_data');
-      }
-      return upload(fields);
+      return upload(form);
     });
 
     router.get('/', (Request request) async {

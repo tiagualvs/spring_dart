@@ -6,16 +6,25 @@ import 'package:spring_dart/spring_dart.dart';
 class UsersController {
   final UsersRepository repository;
 
-  UsersController(this.repository);
+  const UsersController(this.repository);
 
   @Post('/upload')
   @MultipartFormData()
-  Future<Response> upload(@Body() List<FormData> fields) async {
+  Future<Response> upload(@Body() Form form) async {
+    await for (final field in form.fields) {
+      if (field is TextFormField) {
+        // final text = await field.readString();
+      } else if (field is FileFormField) {
+        // final bytes = await field.readBytes();
+        // final filename = field.filename;
+        // final mimeType = field.mimeType;
+      }
+    }
     return Json.noContent();
   }
 
   @Get('/')
-  Future<Response> get() async {
+  Future<Response> findMany() async {
     return Json.ok();
   }
 
@@ -25,17 +34,17 @@ class UsersController {
   }
 
   @Get('/<id>')
-  Future<Response> getById(@Param('id') String id) async {
+  Future<Response> findOne(@Param('id') String id) async {
     return Json.ok();
   }
 
   @Put('/<id>')
-  Future<Response> put(@Param('id') String id) async {
+  Future<Response> updateOne(@Param('id') String id) async {
     return Json.ok();
   }
 
   @Delete('/<id>')
-  Future<Response> delete(@Param('id') String id) async {
+  Future<Response> deleteOne(@Param('id') String id) async {
     return Json.ok();
   }
 }

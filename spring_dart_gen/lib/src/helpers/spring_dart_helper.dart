@@ -36,7 +36,7 @@ class SpringDartHelper {
       throw Exception('Only one SpringDartConfiguration is allowed!');
     }
 
-    return '''// POWERED BY SPRING DART
+    return '''// POWERED BY SPRING DART - ${DateTime.now().toIso8601String()}
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 ${importsSorted.join('\n')}
@@ -56,13 +56,13 @@ for (final middleware in \$defaultServerConfiguration.middlewares) {
   handler = middleware(handler);
 }
 SpringDartDefaults.instance.toEncodable = \$defaultServerConfiguration.toEncodable;
-return await \$defaultServerConfiguration.setup(SpringDart((request) => _exceptionHandler(handler, request)));''' : springDartConfigurations.map((e) {
+return await \$defaultServerConfiguration.setup(SpringDart((request) => _exceptionHandler(handler, request), injector));''' : springDartConfigurations.map((e) {
             return '''${e.content};
             for (final middleware in ${e.name}.middlewares) {
               handler = middleware(handler);
             }
             SpringDartDefaults.instance.toEncodable = ${e.name}.toEncodable;
-            return await ${e.name}.setup(SpringDart((request) => _exceptionHandler(handler, request)));''';
+            return await ${e.name}.setup(SpringDart((request) => _exceptionHandler(handler, request), injector));''';
           }).join('\n')}
 }''';
   }
@@ -84,6 +84,8 @@ return await \$defaultServerConfiguration.setup(SpringDart((request) => _excepti
     dart.sort();
 
     normalized.sort();
+
+    normalized.removeWhere((i) => i == 'package:spring_dart_core/spring_dart_core.dart');
 
     return [...dart.map((i) => 'import \'$i\';'), '', ...normalized.map((i) => 'import \'$i\';')];
   }

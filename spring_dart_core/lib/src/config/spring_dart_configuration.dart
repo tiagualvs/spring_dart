@@ -1,13 +1,14 @@
 import 'dart:io';
 
-import '../../spring_dart_core.dart';
+import 'package:spring_dart_core/spring_dart_core.dart';
 
 typedef ToEncodable = Object? Function(Object? obj);
 
 class SpringDart {
   final Handler handler;
+  final Injector injector;
 
-  const SpringDart(this.handler);
+  const SpringDart(this.handler, this.injector);
 
   Future<HttpServer> start({Object host = '0.0.0.0', int port = 8080}) async {
     return await serve(handler, host, port);

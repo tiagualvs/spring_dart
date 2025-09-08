@@ -10,4 +10,5 @@ export 'src/common/exceptions.dart';
 export 'src/common/filter.dart';
 export 'src/common/param_parser.dart';
 export 'src/common/result.dart';
+export 'src/config/injector.dart';
 export 'src/config/spring_dart_configuration.dart';

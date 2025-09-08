@@ -56,13 +56,13 @@ for (final middleware in \$defaultServerConfiguration.middlewares) {
   handler = middleware(handler);
 }
 SpringDartDefaults.instance.toEncodable = \$defaultServerConfiguration.toEncodable;
-return await \$defaultServerConfiguration.setup(SpringDart((request) => _exceptionHandler(handler, request)));''' : springDartConfigurations.map((e) {
+return await \$defaultServerConfiguration.setup(SpringDart((request) => _exceptionHandler(handler, request), injector));''' : springDartConfigurations.map((e) {
             return '''${e.content};
             for (final middleware in ${e.name}.middlewares) {
               handler = middleware(handler);
             }
             SpringDartDefaults.instance.toEncodable = ${e.name}.toEncodable;
-            return await ${e.name}.setup(SpringDart((request) => _exceptionHandler(handler, request)));''';
+            return await ${e.name}.setup(SpringDart((request) => _exceptionHandler(handler, request), injector));''';
           }).join('\n')}
 }''';
   }

@@ -1,4 +1,4 @@
-// POWERED BY SPRING DART - 2025-09-02T16:11:23.250976
+// POWERED BY SPRING DART - 2025-09-08T18:05:21.499611
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'dart:async';
@@ -68,7 +68,7 @@ Future<void> server(List<String> args) async {
   }
   SpringDartDefaults.instance.toEncodable = serverConfiguration.toEncodable;
   return await serverConfiguration.setup(
-    SpringDart((request) => _exceptionHandler(handler, request)),
+    SpringDart((request) => _exceptionHandler(handler, request), injector),
   );
 }
 

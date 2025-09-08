@@ -40,6 +40,16 @@ class ServerBuilder extends Builder {
       driver = NoneDriver();
     }
 
+    final dependencies = pubspec['dependencies'] as YamlMap? ?? {};
+
+    if ((driver is SqliteFileDriver || driver is SqliteMemoryDriver) && !dependencies.containsKey('sqlite3')) {
+      throw Exception('sqlite3 package not found!');
+    }
+
+    if (driver is PostgresDriver && !dependencies.containsKey('postgres')) {
+      throw Exception('postgres package not found!');
+    }
+
     _buildExtensions = {
       r'$package$': [p.join('bin', '$package.dart'), p.join('lib', 'server.dart')],
     };

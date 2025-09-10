@@ -24,7 +24,7 @@ class RepositoryHelper {
     };
 
     repositories.add(
-      'injector.set<$className>(() => $className(${constructorParams.join(', ')}))',
+      'injector.set<$className>(() => $className(${constructorParams.map((e) => 'injector.get()').join(', ')}))',
     );
 
     return '';

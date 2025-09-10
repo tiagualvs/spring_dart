@@ -148,7 +148,7 @@ class ServerBuilder extends Builder {
   }
 
   String defaultNotFoundHandler() {
-    return '''FutureOr<Response> _defaultNotFoundHandler(Request request) async {
+    return '''Future<Response> _defaultNotFoundHandler(Request request) async {
       return Json(
         404,
         body: {
@@ -161,7 +161,7 @@ class ServerBuilder extends Builder {
   String exceptionHandlerHelper(
     Set<({String name, String className, String content, List<MethodElement> methods})> exceptionHandler,
   ) {
-    return '''FutureOr<Response> _exceptionHandler(Handler handler, Request request) async {
+    return '''Future<Response> _exceptionHandler(Handler handler, Request request) async {
   try {
     return await handler(request);
   }  catch (e) {
